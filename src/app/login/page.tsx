@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { LockKeyhole } from "lucide-react";
 
 import { loginAction } from "@/app/actions";
@@ -75,10 +74,7 @@ export default async function LoginPage({
             </div>
             <Button type="submit" size="lg">Entrar</Button>
             <p className="text-center text-sm text-muted-foreground">
-              Sin cuenta?{" "}
-              <Link className="font-medium text-foreground underline" href="/register">
-                Crear una
-              </Link>
+              Acceso solo para usuarios creados manualmente.
             </p>
           </form>
         </CardContent>

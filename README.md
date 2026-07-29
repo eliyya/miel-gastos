@@ -35,10 +35,21 @@ En esta maquina, `.env` apunta a la base de Supabase del proyecto.
 
 ## Flujo de usuario
 
-1. Crea cuenta con correo y contrasena.
-2. Escanea el QR TOTP.
-3. Confirma el codigo de 6 digitos.
-4. Registra gastos desde el tablero principal.
+1. Crea usuarios manualmente desde consola.
+2. El usuario entra con correo y contrasena temporal.
+3. Escanea el QR TOTP.
+4. Confirma el codigo de 6 digitos.
+5. Registra gastos desde el tablero principal.
+
+## Usuarios
+
+El registro publico esta cerrado. Para crear un usuario:
+
+```bash
+pnpm user:create correo@ejemplo.com "password-temporal" "Nombre"
+```
+
+En el primer inicio de sesion, deja vacio el codigo TOTP. La app enviara al usuario a configurar su QR.
 
 ## Datos iniciales
 
@@ -52,4 +63,5 @@ En esta maquina, `.env` apunta a la base de Supabase del proyecto.
 pnpm lint
 pnpm build
 pnpm db:studio
+pnpm user:create correo@ejemplo.com "password-temporal" "Nombre"
 ```

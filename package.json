@@ -10,7 +10,8 @@
     "db:up": "docker compose up -d postgres",
     "db:migrate": "prisma migrate dev",
     "db:seed": "node scripts/seed.mjs",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "user:create": "node scripts/create-user.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

@@ -1,6 +1,5 @@
 "use server";
 
-import { Prisma } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -8,7 +7,6 @@ import { z } from "zod";
 import {
   createSession,
   destroySession,
-  hashPassword,
   requireTotpUser,
   requireUser,
   verifyPassword,
@@ -18,42 +16,9 @@ import { prisma } from "@/lib/prisma";
 import { createTotpSecret, verifyTotpToken } from "@/lib/totp";
 
 const emailSchema = z.string().trim().email().toLowerCase();
-const passwordSchema = z.string().min(8);
 
 function formString(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
-}
-
-export async function registerAction(formData: FormData) {
-  const email = emailSchema.parse(formString(formData, "email"));
-  const password = passwordSchema.parse(formString(formData, "password"));
-  const name = formString(formData, "name") || null;
-  const passwordHash = await hashPassword(password);
-  const totpSecret = createTotpSecret();
-
-  try {
-    const user = await prisma.user.create({
-      data: {
-        email,
-        name,
-        passwordHash,
-        totpSecret,
-      },
-    });
-
-    await createSession(user.id);
-  } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
-      redirect("/register?error=email");
-    }
-
-    throw error;
-  }
-
-  redirect("/totp/setup");
 }
 
 export async function loginAction(formData: FormData) {
