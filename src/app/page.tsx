@@ -49,13 +49,11 @@ export default async function Home({
 
   const [expenses, totals] = await Promise.all([
     prisma.expense.findMany({
-      where: { userId: user.id },
       orderBy: { spentAt: "desc" },
       take: 40,
     }),
     prisma.expense.aggregate({
       where: {
-        userId: user.id,
         spentAt: { gte: monthStart },
       },
       _sum: { amountCents: true },
@@ -208,7 +206,7 @@ export default async function Home({
               <CardHeader>
                 <CardTitle>Gastos recientes</CardTitle>
                 <CardDescription>
-                  Ultimos 40 registros capturados en esta cuenta.
+                  Ultimos 40 registros capturados para el negocio.
                 </CardDescription>
               </CardHeader>
               <CardContent>

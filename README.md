@@ -1,6 +1,7 @@
 # Gastos de Miel
 
 App interna para registrar gastos del negocio de miel Martin del Campo.
+Todos los usuarios creados manualmente trabajan sobre la misma libreta del negocio.
 
 ## Stack
 
@@ -40,6 +41,8 @@ En esta maquina, `.env` apunta a la base de Supabase del proyecto.
 3. Escanea el QR TOTP.
 4. Confirma el codigo de 6 digitos.
 5. Registra gastos desde el tablero principal.
+
+Los gastos son compartidos entre todos los usuarios del negocio. La cuenta que captura el movimiento queda guardada como referencia interna.
 
 ## Usuarios
 

@@ -107,13 +107,12 @@ export async function createExpenseAction(formData: FormData) {
 }
 
 export async function deleteExpenseAction(formData: FormData) {
-  const user = await requireTotpUser();
+  await requireTotpUser();
   const id = formString(formData, "id");
 
   await prisma.expense.deleteMany({
     where: {
       id,
-      userId: user.id,
     },
   });
 
