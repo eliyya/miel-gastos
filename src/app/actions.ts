@@ -7,6 +7,7 @@ import { z } from "zod";
 import {
   createSession,
   destroySession,
+  hashPassword,
   requireTotpUser,
   requireUser,
   verifyPassword,
@@ -16,6 +17,7 @@ import { prisma } from "@/lib/prisma";
 import { createTotpSecret, verifyTotpToken } from "@/lib/totp";
 
 const emailSchema = z.string().trim().email().toLowerCase();
+const nameSchema = z.string().trim().max(80);
 
 function formString(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -45,6 +47,60 @@ export async function loginAction(formData: FormData) {
 export async function logoutAction() {
   await destroySession();
   redirect("/login");
+}
+
+export async function updateProfileAction(formData: FormData) {
+  const user = await requireTotpUser();
+  const email = emailSchema.parse(formString(formData, "email"));
+  const name = nameSchema.parse(formString(formData, "name")) || null;
+
+  if (email !== user.email) {
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+
+    if (existingUser && existingUser.id !== user.id) {
+      redirect("/settings?error=email");
+    }
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { email, name },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/settings");
+  redirect("/settings?updated=profile");
+}
+
+export async function changePasswordAction(formData: FormData) {
+  const user = await requireTotpUser();
+  const currentPassword = formString(formData, "currentPassword");
+  const newPassword = formString(formData, "newPassword");
+  const confirmPassword = formString(formData, "confirmPassword");
+
+  if (!(await verifyPassword(currentPassword, user.passwordHash))) {
+    redirect("/settings?error=current-password");
+  }
+
+  if (newPassword.length < 8 || newPassword !== confirmPassword) {
+    redirect("/settings?error=new-password");
+  }
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: await hashPassword(newPassword) },
+    }),
+    prisma.session.deleteMany({
+      where: {
+        userId: user.id,
+        tokenHash: { not: "" },
+      },
+    }),
+  ]);
+
+  await createSession(user.id);
+  redirect("/settings?updated=password");
 }
 
 export async function enableTotpAction(formData: FormData) {

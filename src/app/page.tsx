@@ -1,8 +1,9 @@
-import { CalendarDays, LogOut, Plus, ShieldCheck, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { CalendarDays, LogOut, Plus, Settings, ShieldCheck, Trash2 } from "lucide-react";
 
 import { createExpenseAction, deleteExpenseAction, logoutAction } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -81,12 +82,18 @@ export default async function Home({
               {user.name || user.email} · Martin del Campo
             </p>
           </div>
-          <form action={logoutAction}>
-            <Button variant="outline" type="submit">
-              <LogOut />
-              Salir
-            </Button>
-          </form>
+          <div className="flex gap-2">
+            <Link href="/settings" className={buttonVariants({ variant: "outline" })}>
+              <Settings />
+              Cuenta
+            </Link>
+            <form action={logoutAction}>
+              <Button variant="outline" type="submit">
+                <LogOut />
+                Salir
+              </Button>
+            </form>
+          </div>
         </header>
 
         <section className="grid gap-4 md:grid-cols-[minmax(320px,420px)_1fr]">
