@@ -7,10 +7,9 @@ import pg from "pg";
 
 const { Client } = pg;
 
-const [, , emailArg, passwordArg, roleArg = "ADMIN", ...nameParts] = process.argv;
+const [, , emailArg, passwordArg, ...nameParts] = process.argv;
 const email = emailArg?.trim().toLowerCase();
 const password = passwordArg ?? "";
-const role = roleArg.trim().toUpperCase();
 const name = nameParts.join(" ").trim() || null;
 
 if (!process.env.DATABASE_URL) {
@@ -18,15 +17,11 @@ if (!process.env.DATABASE_URL) {
 }
 
 if (!email || !email.includes("@")) {
-  throw new Error('Usage: pnpm user:create email@example.com password ADMIN "Name"');
+  throw new Error("Usage: pnpm user:create email@example.com password \"Name\"");
 }
 
 if (password.length < 8) {
   throw new Error("Password must be at least 8 characters");
-}
-
-if (!["OWNER", "ADMIN"].includes(role)) {
-  throw new Error("Role must be OWNER or ADMIN");
 }
 
 const client = new Client({ connectionString: process.env.DATABASE_URL });
@@ -47,9 +42,9 @@ try {
 
   await client.query(
     `insert into "User"
-      (id, email, name, role, "passwordHash", "totpSecret", "totpEnabled", "createdAt", "updatedAt")
-     values ($1, $2, $3, $4::"UserRole", $5, $6, false, now(), now())`,
-    [userId, email, name, role, passwordHash, generateSecret()],
+      (id, email, name, "passwordHash", "totpSecret", "totpEnabled", "createdAt", "updatedAt")
+     values ($1, $2, $3, $4, $5, false, now(), now())`,
+    [userId, email, name, passwordHash, generateSecret()],
   );
 
   console.log(
@@ -57,7 +52,6 @@ try {
       {
         email,
         name,
-        role,
         created: true,
         totpEnabled: false,
       },

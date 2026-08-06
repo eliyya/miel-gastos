@@ -3,7 +3,6 @@ import { ArrowLeft, KeyRound, Save, ShieldCheck, UserRound } from "lucide-react"
 
 import {
   changePasswordAction,
-  createAdminUserAction,
   logoutAction,
   regenerateTotpAction,
   updateProfileAction,
@@ -26,9 +25,6 @@ const errorMessages: Record<string, string> = {
   email: "Ese correo ya esta asignado a otro usuario.",
   "current-password": "La contrasena actual no coincide.",
   "new-password": "La nueva contrasena debe tener 8 caracteres y coincidir.",
-  "admin-exists": "Ese administrador ya existe.",
-  "admin-password": "La contrasena inicial debe tener 8 caracteres y coincidir.",
-  owner: "Solo el owner puede crear administradores.",
 };
 
 const updatedMessages: Record<string, string> = {
@@ -39,10 +35,10 @@ const updatedMessages: Record<string, string> = {
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ createdAdmin?: string; error?: string; updated?: string }>;
+  searchParams: Promise<{ error?: string; updated?: string }>;
 }) {
   const user = await requireTotpUser();
-  const { createdAdmin, error, updated } = await searchParams;
+  const { error, updated } = await searchParams;
   const errorMessage = error ? errorMessages[error] : null;
   const updatedMessage = updated ? updatedMessages[updated] : null;
 
@@ -69,7 +65,6 @@ export default async function SettingsPage({
                 <ShieldCheck className="size-3" />
                 TOTP activo
               </Badge>
-              <Badge variant="outline">{user.role}</Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               {user.email} · Martin del Campo
@@ -91,12 +86,6 @@ export default async function SettingsPage({
         {updatedMessage ? (
           <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
             {updatedMessage}
-          </p>
-        ) : null}
-
-        {createdAdmin ? (
-          <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-            Administrador creado: {createdAdmin}
           </p>
         ) : null}
 
@@ -212,11 +201,7 @@ export default async function SettingsPage({
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-lg border bg-muted/30 p-3">
-                <p className="text-xs text-muted-foreground">Rol</p>
-                <p className="mt-1 font-medium">{user.role}</p>
-              </div>
+            <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-lg border bg-muted/30 p-3">
                 <p className="text-xs text-muted-foreground">Segundo factor</p>
                 <p className="mt-1 font-medium">
@@ -241,74 +226,6 @@ export default async function SettingsPage({
             </form>
           </CardContent>
         </Card>
-
-        {user.role === "OWNER" ? (
-          <Card className="rounded-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserRound className="size-5" />
-                Crear administrador
-              </CardTitle>
-              <CardDescription>
-                Alta manual de usuarios con rol administrativo.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form action={createAdminUserAction} className="grid gap-4 md:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="adminName">Nombre</Label>
-                  <Input
-                    id="adminName"
-                    name="adminName"
-                    autoComplete="name"
-                    placeholder="Lizeth"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="adminEmail">Correo</Label>
-                  <Input
-                    id="adminEmail"
-                    name="adminEmail"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="lizethjimenez399@outlook.es"
-                    required
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="adminPassword">Contrasena inicial</Label>
-                  <Input
-                    id="adminPassword"
-                    name="adminPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    minLength={8}
-                    required
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="adminConfirmPassword">Confirmar contrasena</Label>
-                  <Input
-                    id="adminConfirmPassword"
-                    name="adminConfirmPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    minLength={8}
-                    required
-                  />
-                </div>
-
-                <Button type="submit" className="w-fit md:col-span-2">
-                  <Save />
-                  Crear administrador
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        ) : null}
       </div>
     </main>
   );
