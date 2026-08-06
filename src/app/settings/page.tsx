@@ -6,8 +6,10 @@ import {
   createAdminUserAction,
   logoutAction,
   regenerateTotpAction,
+  revokeAgentTokenAction,
   updateProfileAction,
 } from "@/app/actions";
+import { AgentTokenForm } from "@/components/agent-token-form";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -21,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { requireTotpUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
+import { prisma } from "@/lib/prisma";
 
 const errorMessages: Record<string, string> = {
   email: "Ese correo ya esta asignado a otro usuario.",
@@ -34,6 +37,7 @@ const errorMessages: Record<string, string> = {
 const updatedMessages: Record<string, string> = {
   profile: "Informacion de usuario actualizada.",
   password: "Contrasena actualizada.",
+  "token-revoked": "Token revocado.",
 };
 
 export default async function SettingsPage({
@@ -45,6 +49,13 @@ export default async function SettingsPage({
   const { createdAdmin, error, updated } = await searchParams;
   const errorMessage = error ? errorMessages[error] : null;
   const updatedMessage = updated ? updatedMessages[updated] : null;
+  const agentTokens =
+    user.role === "OWNER"
+      ? await prisma.agentToken.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 20,
+        })
+      : [];
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_42%)]">
@@ -243,71 +254,127 @@ export default async function SettingsPage({
         </Card>
 
         {user.role === "OWNER" ? (
-          <Card className="rounded-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserRound className="size-5" />
-                Crear administrador
-              </CardTitle>
-              <CardDescription>
-                Alta manual de usuarios con rol administrativo.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form action={createAdminUserAction} className="grid gap-4 md:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="adminName">Nombre</Label>
-                  <Input
-                    id="adminName"
-                    name="adminName"
-                    autoComplete="name"
-                    placeholder="Lizeth"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="adminEmail">Correo</Label>
-                  <Input
-                    id="adminEmail"
-                    name="adminEmail"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="lizethjimenez399@outlook.es"
-                    required
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="adminPassword">Contrasena inicial</Label>
-                  <Input
-                    id="adminPassword"
-                    name="adminPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    minLength={8}
-                    required
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="adminConfirmPassword">Confirmar contrasena</Label>
-                  <Input
-                    id="adminConfirmPassword"
-                    name="adminConfirmPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    minLength={8}
-                    required
-                  />
-                </div>
-
-                <Button type="submit" className="w-fit md:col-span-2">
-                  <Save />
+          <>
+            <Card className="rounded-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserRound className="size-5" />
                   Crear administrador
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+                </CardTitle>
+                <CardDescription>
+                  Alta manual de usuarios con rol administrativo.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form action={createAdminUserAction} className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="adminName">Nombre</Label>
+                    <Input
+                      id="adminName"
+                      name="adminName"
+                      autoComplete="name"
+                      placeholder="Lizeth"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="adminEmail">Correo</Label>
+                    <Input
+                      id="adminEmail"
+                      name="adminEmail"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="lizethjimenez399@outlook.es"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="adminPassword">Contrasena inicial</Label>
+                    <Input
+                      id="adminPassword"
+                      name="adminPassword"
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={8}
+                      required
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="adminConfirmPassword">Confirmar contrasena</Label>
+                    <Input
+                      id="adminConfirmPassword"
+                      name="adminConfirmPassword"
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={8}
+                      required
+                    />
+                  </div>
+
+                  <Button type="submit" className="w-fit md:col-span-2">
+                    <Save />
+                    Crear administrador
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <KeyRound className="size-5" />
+                  Tokens para agentes
+                </CardTitle>
+                <CardDescription>
+                  Acceso MCP para registrar gastos y crear cuentas.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-5">
+                <AgentTokenForm />
+
+                <div className="grid gap-2">
+                  {agentTokens.length === 0 ? (
+                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                      No hay tokens creados.
+                    </p>
+                  ) : (
+                    agentTokens.map((token) => (
+                      <div
+                        key={token.id}
+                        className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div>
+                          <p className="font-medium">{token.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {token.tokenPrefix}... · creado {formatDate(token.createdAt)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {token.revokedAt
+                              ? `Revocado ${formatDate(token.revokedAt)}`
+                              : token.lastUsedAt
+                                ? `Ultimo uso ${formatDate(token.lastUsedAt)}`
+                                : "Sin uso registrado"}
+                          </p>
+                        </div>
+                        {token.revokedAt ? (
+                          <Badge variant="secondary">Revocado</Badge>
+                        ) : (
+                          <form action={revokeAgentTokenAction}>
+                            <input type="hidden" name="id" value={token.id} />
+                            <Button type="submit" variant="outline">
+                              Revocar
+                            </Button>
+                          </form>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </>
         ) : null}
       </div>
     </main>

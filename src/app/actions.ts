@@ -12,6 +12,11 @@ import {
   requireUser,
   verifyPassword,
 } from "@/lib/auth";
+import {
+  createAgentTokenValue,
+  getAgentTokenPrefix,
+  hashAgentToken,
+} from "@/lib/agent-tokens";
 import { parseMoneyToCents } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { createTotpSecret, verifyTotpToken } from "@/lib/totp";
@@ -21,6 +26,16 @@ const nameSchema = z.string().trim().max(80);
 
 function formString(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
+}
+
+async function requireOwner() {
+  const user = await requireTotpUser();
+
+  if (user.role !== "OWNER") {
+    redirect("/settings?error=owner");
+  }
+
+  return user;
 }
 
 export async function loginAction(formData: FormData) {
@@ -104,11 +119,7 @@ export async function changePasswordAction(formData: FormData) {
 }
 
 export async function createAdminUserAction(formData: FormData) {
-  const user = await requireTotpUser();
-
-  if (user.role !== "OWNER") {
-    redirect("/settings?error=owner");
-  }
+  await requireOwner();
 
   const email = emailSchema.parse(formString(formData, "adminEmail"));
   const name = nameSchema.parse(formString(formData, "adminName")) || null;
@@ -136,6 +147,40 @@ export async function createAdminUserAction(formData: FormData) {
   });
 
   redirect(`/settings?createdAdmin=${encodeURIComponent(email)}`);
+}
+
+export async function createAgentTokenAction(
+  _previousState: { token?: string; error?: string } | null,
+  formData: FormData,
+) {
+  const user = await requireOwner();
+  const name = nameSchema.parse(formString(formData, "tokenName")) || "Agente";
+  const token = createAgentTokenValue();
+
+  await prisma.agentToken.create({
+    data: {
+      name,
+      tokenHash: hashAgentToken(token),
+      tokenPrefix: getAgentTokenPrefix(token),
+      createdById: user.id,
+    },
+  });
+
+  revalidatePath("/settings");
+  return { token };
+}
+
+export async function revokeAgentTokenAction(formData: FormData) {
+  const user = await requireOwner();
+  const id = formString(formData, "id");
+
+  await prisma.agentToken.updateMany({
+    where: { id, createdById: user.id },
+    data: { revokedAt: new Date() },
+  });
+
+  revalidatePath("/settings");
+  redirect("/settings?updated=token-revoked");
 }
 
 export async function enableTotpAction(formData: FormData) {

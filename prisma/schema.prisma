@@ -29,6 +29,7 @@ model User {
   updatedAt    DateTime  @updatedAt
   expenses     Expense[]
   sessions     Session[]
+  agentTokens  AgentToken[]
 }
 
 model Session {
@@ -41,6 +42,21 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model AgentToken {
+  id          String    @id @default(cuid())
+  name        String
+  tokenHash   String    @unique
+  tokenPrefix String
+  createdById String
+  createdAt   DateTime  @default(now())
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdBy   User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([createdById])
+  @@index([revokedAt])
 }
 
 model Expense {
