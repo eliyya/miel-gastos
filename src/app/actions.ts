@@ -103,6 +103,41 @@ export async function changePasswordAction(formData: FormData) {
   redirect("/settings?updated=password");
 }
 
+export async function createAdminUserAction(formData: FormData) {
+  const user = await requireTotpUser();
+
+  if (user.role !== "OWNER") {
+    redirect("/settings?error=owner");
+  }
+
+  const email = emailSchema.parse(formString(formData, "adminEmail"));
+  const name = nameSchema.parse(formString(formData, "adminName")) || null;
+  const password = formString(formData, "adminPassword");
+  const confirmPassword = formString(formData, "adminConfirmPassword");
+  const existingUser = await prisma.user.findUnique({ where: { email } });
+
+  if (existingUser) {
+    redirect("/settings?error=admin-exists");
+  }
+
+  if (password.length < 8 || password !== confirmPassword) {
+    redirect("/settings?error=admin-password");
+  }
+
+  await prisma.user.create({
+    data: {
+      email,
+      name,
+      role: "ADMIN",
+      passwordHash: await hashPassword(password),
+      totpSecret: createTotpSecret(),
+      totpEnabled: false,
+    },
+  });
+
+  redirect(`/settings?createdAdmin=${encodeURIComponent(email)}`);
+}
+
 export async function enableTotpAction(formData: FormData) {
   const user = await requireUser();
   const code = formString(formData, "code");

@@ -10,6 +10,7 @@ const { Client } = pg;
 const ownerEmail = process.env.APP_OWNER_EMAIL || "eli@local.test";
 const ownerName = process.env.APP_OWNER_NAME || "Eli";
 const ownerPassword = process.env.APP_OWNER_PASSWORD || "change-me-12345";
+const ownerRole = "OWNER";
 
 const expense = {
   amountCents: 6000,
@@ -44,11 +45,18 @@ try {
 
     await client.query(
       `insert into "User"
-        (id, email, name, "passwordHash", "totpSecret", "totpEnabled", "createdAt", "updatedAt")
-       values ($1, $2, $3, $4, $5, false, now(), now())`,
-      [userId, ownerEmail, ownerName, passwordHash, generateSecret()],
+        (id, email, name, role, "passwordHash", "totpSecret", "totpEnabled", "createdAt", "updatedAt")
+       values ($1, $2, $3, $4::"UserRole", $5, $6, false, now(), now())`,
+      [userId, ownerEmail, ownerName, ownerRole, passwordHash, generateSecret()],
     );
-  } else if (!existingUser.rows[0].totpSecret) {
+  } else {
+    await client.query(
+      'update "User" set role = $1::"UserRole", "updatedAt" = now() where id = $2',
+      [ownerRole, userId],
+    );
+  }
+
+  if (existingUser.rows[0] && !existingUser.rows[0].totpSecret) {
     await client.query(
       'update "User" set "totpSecret" = $1, "updatedAt" = now() where id = $2',
       [generateSecret(), userId],
