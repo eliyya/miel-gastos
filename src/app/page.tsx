@@ -77,6 +77,7 @@ export default async function Home({
                 <ShieldCheck className="size-3" />
                 TOTP activo
               </Badge>
+              <Badge variant="outline">{user.role}</Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               {user.name || user.email} · Martin del Campo
