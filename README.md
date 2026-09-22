@@ -44,6 +44,32 @@ En esta maquina, `.env` apunta a la base de Supabase del proyecto.
 
 Los gastos son compartidos entre todos los usuarios del negocio. La cuenta que captura el movimiento queda guardada como referencia interna.
 
+## Ventas
+
+`/sales` consulta las ventas del negocio, con paginación de 40 registros. Cada fila
+se despliega con clic o con el botón accesible por teclado para mostrar productos,
+cantidades, precios, subtotales, costos y comisiones. El botón «Registrar venta» abre
+un modal para capturar varios productos, fecha, cliente opcional, vendedor y tarjeta.
+La tasa de tarjeta inicia en 4.06% y puede cambiarse. El modal calcula una vista previa;
+el servidor valida los datos y guarda todos los valores históricos en una transacción.
+Si el catálogo cambia durante la captura, solicita revisar los nuevos importes.
+
+`/sales/catalog` permite administrar productos, vendedores y porcentajes por
+producto. Desactivar un registro conserva el historial. Una comisión vacía significa
+sin configurar; 0% significa que el vendedor no cobra comisión.
+
+El esquema separa `Sale` y `SaleItem`. Cada partida conserva el nombre, precio y
+costo unitarios del producto y el porcentaje del vendedor. La venta conserva el
+nombre del vendedor, fecha sin hora, cliente opcional y tasa de tarjeta (cero sin
+tarjeta). Los importes se almacenan en centavos y los porcentajes en puntos base:
+4.06% = 406. Los subtotales, producción, pago al vendedor, costo total y ganancia
+se calculan usando exclusivamente esos valores históricos, sin metadata duplicada.
+La comisión se redondea al centavo por partida y la tarjeta sobre el subtotal total.
+La ganancia es el margen de la venta; no descuenta de nuevo los gastos de la libreta.
+
+Aplicar el esquema antes de usar estas pantallas: `pnpm exec prisma migrate deploy`.
+Pruebas de cálculos: `node --test scripts/sales.test.mjs` (Node 24).
+
 ## Usuarios
 
 El registro publico esta cerrado. Para crear un usuario:

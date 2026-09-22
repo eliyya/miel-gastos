@@ -18,18 +18,84 @@ enum UserRole {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
+  id           String       @id @default(cuid())
+  email        String       @unique
   name         String?
-  role         UserRole  @default(ADMIN)
+  role         UserRole     @default(ADMIN)
   passwordHash String
   totpSecret   String?
-  totpEnabled  Boolean   @default(false)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  totpEnabled  Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
   expenses     Expense[]
   sessions     Session[]
   agentTokens  AgentToken[]
+  sales        Sale[]
+}
+
+model Product {
+  id          String             @id @default(cuid())
+  name        String
+  priceCents  Int
+  costCents   Int
+  active      Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  commissions SellerCommission[]
+  saleItems   SaleItem[]
+}
+
+model Seller {
+  id          String             @id @default(cuid())
+  name        String
+  active      Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  commissions SellerCommission[]
+  sales       Sale[]
+}
+
+model SellerCommission {
+  sellerId  String
+  productId String
+  rateBps   Int
+  seller    Seller  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([sellerId, productId])
+}
+
+model Sale {
+  id          String     @id @default(cuid())
+  userId      String
+  soldAt      DateTime   @db.Date
+  customer    String?
+  sellerId    String
+  sellerName  String
+  paidByCard  Boolean    @default(false)
+  cardRateBps Int        @default(0)
+  createdAt   DateTime   @default(now())
+  user        User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  seller      Seller     @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  items       SaleItem[]
+
+  @@index([soldAt, createdAt])
+  @@index([sellerId, soldAt])
+}
+
+model SaleItem {
+  id             String  @id @default(cuid())
+  saleId         String
+  productId      String
+  productName    String
+  quantity       Int
+  unitPriceCents Int
+  unitCostCents  Int
+  commissionBps  Int
+  sale           Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product        Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([saleId, productId])
 }
 
 model Session {

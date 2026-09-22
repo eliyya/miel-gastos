@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Gastos de Miel",
-  description: "Registro de gastos para el negocio de miel Martin del Campo.",
+  title: "Miel · Gastos y ventas",
+  description: "Registro de gastos y ventas para el negocio de miel Martin del Campo.",
 };
 
 export default function RootLayout({

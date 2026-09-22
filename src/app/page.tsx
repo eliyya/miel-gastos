@@ -84,6 +84,9 @@ export default async function Home({
             </p>
           </div>
           <div className="flex gap-2">
+            <Link href="/sales" className={buttonVariants({ variant: "outline" })}>
+              Ventas
+            </Link>
             <Link href="/settings" className={buttonVariants({ variant: "outline" })}>
               <Settings />
               Cuenta
