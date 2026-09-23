@@ -12,7 +12,7 @@ import { formatMoney } from "@/lib/format";
 import { calculateSale, parseHundredths, saleSnapshot, type CatalogProduct, type CatalogSeller } from "@/lib/sales";
 
 const selectClass = "h-9 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-2";
-type Row = { key: number; productId: string; quantity: string };
+type Row = { key: number; productId: string; quantity: string; unitPrice?: string };
 
 export function SaleDialog({ products, sellers, today }: {
   products: CatalogProduct[];
@@ -33,13 +33,13 @@ export function SaleDialog({ products, sellers, today }: {
   const [rows, setRows] = useState<Row[]>([{ key: 0, productId: "", quantity: "1" }]);
   const nextKey = useRef(1);
   const seller = sellers.find((s) => s.id === sellerId);
-  const snapshot = seller ? saleSnapshot(products, seller, rows.map((r) => ({ productId: r.productId, quantity: Number(r.quantity) }))) : null;
+  const snapshot = seller ? saleSnapshot(products, seller, rows.map((r) => ({ productId: r.productId, quantity: Number(r.quantity), unitPriceCents: r.unitPrice === undefined ? undefined : parseHundredths(r.unitPrice) ?? 0 }))) : null;
   const missingCommission = !!seller && rows.some((r) => r.productId && !seller.commissions.some((c) => c.productId === r.productId));
   const previewItems = rows.map((row) => {
     const product = products.find((p) => p.id === row.productId);
     return {
       quantity: /^\d+$/.test(row.quantity) ? Math.min(Number(row.quantity), 10_000) : 0,
-      unitPriceCents: product?.priceCents ?? 0, unitCostCents: product?.costCents ?? 0,
+      unitPriceCents: row.unitPrice === undefined ? product?.priceCents ?? 0 : parseHundredths(row.unitPrice) ?? 0, unitCostCents: product?.costCents ?? 0,
       commissionBps: seller?.commissions.find((c) => c.productId === row.productId)?.rateBps ?? 0,
     };
   });
@@ -92,9 +92,9 @@ export function SaleDialog({ products, sellers, today }: {
                 </div>
                 <div className="space-y-3">
                   {rows.map((row, i) => <div key={row.key} className="grid grid-cols-2 items-end gap-3 rounded-lg border p-3 sm:grid-cols-[minmax(0,1fr)_85px_100px_100px_32px]">
-                    <label className="col-span-2 grid gap-2 text-sm sm:col-span-1">Producto {i + 1}<select className={selectClass} name="productId" value={row.productId} onChange={(e) => updateRow(row.key, { productId: e.target.value })} required><option value="">Selecciona un producto</option>{products.map((p) => <option key={p.id} value={p.id} disabled={rows.some((r) => r.key !== row.key && r.productId === p.id)}>{p.name}</option>)}</select></label>
+                    <label className="col-span-2 grid gap-2 text-sm sm:col-span-1">Producto {i + 1}<select className={selectClass} name="productId" value={row.productId} onChange={(e) => updateRow(row.key, { productId: e.target.value, unitPrice: undefined })} required><option value="">Selecciona un producto</option>{products.map((p) => <option key={p.id} value={p.id} disabled={rows.some((r) => r.key !== row.key && r.productId === p.id)}>{p.name}</option>)}</select></label>
                     <label className="grid gap-2 text-sm">Cantidad<Input type="number" name="quantity" min={1} max={10000} step={1} value={row.quantity} onChange={(e) => updateRow(row.key, { quantity: e.target.value })} required /></label>
-                    <div className="text-sm"><p className="text-xs text-muted-foreground">Precio unitario</p><p className="py-2 tabular-nums">{formatMoney(previewItems[i].unitPriceCents)}</p></div>
+                    <label className="grid gap-2 text-sm">Precio unitario<Input type="number" name="unitPrice" min="0" max="1000000" step="0.01" required value={row.unitPrice ?? (previewItems[i].unitPriceCents / 100).toFixed(2)} onChange={(e) => updateRow(row.key, { unitPrice: e.target.value })} /></label>
                     <div className="text-sm"><p className="text-xs text-muted-foreground">Subtotal</p><p className="py-2 font-medium tabular-nums">{formatMoney(totals.lines[i].subtotal)}</p></div>
                     <Button type="button" variant="ghost" size="icon" disabled={rows.length === 1} aria-label={`Quitar producto ${i + 1}`} onClick={() => setRows(rows.filter((r) => r.key !== row.key))}><Trash2 /></Button>
                   </div>)}
@@ -108,7 +108,7 @@ export function SaleDialog({ products, sellers, today }: {
                 <dl className="grid grid-cols-2 gap-4 rounded-lg bg-muted/50 p-4 sm:grid-cols-3">
                   {[["Subtotal", totals.subtotal], ["Producción", totals.production], ["Pago al vendedor", totals.sellerPayment], ["Comisión tarjeta", totals.cardFee], ["Costo total", totals.cost], ["Ganancia", totals.profit]].map(([label, value]) => <div key={label}><dt className="text-xs text-muted-foreground">{label}</dt><dd className="mt-1 font-semibold tabular-nums">{formatMoney(Number(value))}</dd></div>)}
                 </dl>
-                <p className="text-xs text-muted-foreground">La producción incluye producto, envase y etiqueta. La comisión del vendedor corresponde a cada producto.</p>
+                <p className="text-xs text-muted-foreground">Puedes ajustar el precio unitario para esta venta sin cambiar el catálogo. La producción incluye producto, envase y etiqueta. La comisión del vendedor corresponde a cada producto.</p>
                 {error && <div role="alert" className="space-y-2 rounded-lg border border-destructive/30 p-3 text-sm"><p className="text-destructive">{error}</p><Button type="button" variant="outline" onClick={() => { router.refresh(); setError(""); }}>Actualizar catálogo</Button></div>}
               </fieldset>
               <div className="sticky bottom-0 flex justify-end gap-2 border-t bg-background px-5 py-4">

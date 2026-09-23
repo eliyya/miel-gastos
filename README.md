@@ -53,6 +53,12 @@ un modal para capturar varios productos, fecha, cliente opcional, vendedor y tar
 La tasa de tarjeta inicia en 4.06% y puede cambiarse. El modal calcula una vista previa;
 el servidor valida los datos y guarda todos los valores históricos en una transacción.
 Si el catálogo cambia durante la captura, solicita revisar los nuevos importes.
+El precio unitario se puede ajustar por partida para dar un precio especial (incluido
+cero para cortesías), sin modificar el catálogo. Los costos y porcentajes se obtienen
+del servidor; las comisiones se calculan sobre el importe efectivamente vendido.
+Cada venta puede eliminarse desde la tabla mediante un modal de confirmación
+asíncrono. Espera la respuesta, muestra errores y elimina también sus partidas;
+los totales se actualizan al terminar.
 
 `/sales/catalog` permite administrar productos, vendedores y porcentajes por
 producto. Desactivar un registro conserva el historial. Una comisión vacía significa

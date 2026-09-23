@@ -8,10 +8,19 @@ import { calculateSale, parseHundredths, parseSaleInput, saleSnapshot, type Sale
 
 const text = (form: FormData, key: string) => String(form.get(key) ?? "").trim();
 
+export async function deleteSaleAction(id: string): Promise<SalesFormState> {
+  await requireTotpUser();
+  if (typeof id !== "string" || !id.trim() || id.length > 128) return { error: "La venta no es válida." };
+  // SaleItem is removed by the database's ON DELETE CASCADE; retries are harmless.
+  await prisma.sale.deleteMany({ where: { id } });
+  revalidatePath("/sales");
+  return { success: "Venta eliminada correctamente." };
+}
+
 export async function createSaleAction(form: FormData): Promise<SalesFormState> {
   const user = await requireTotpUser();
   const input = parseSaleInput(form);
-  if (!input) return { error: "Revisa la fecha, el vendedor, la tasa de tarjeta y las cantidades. No repitas productos." };
+  if (!input) return { error: "Revisa fecha, vendedor, tasa, cantidades y precios. Usa precios no negativos con hasta dos decimales y no repitas productos." };
 
   const result = await prisma.$transaction(async (tx) => {
     const seller = await tx.seller.findUnique({ where: { id: input.sellerId }, include: { commissions: true } });

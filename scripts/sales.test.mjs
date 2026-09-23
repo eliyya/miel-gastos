@@ -17,9 +17,35 @@ test("multiple products: quantity, individual commissions and card fee", () => {
 
 function saleForm() {
   const form = new FormData();
-  for (const [key, value] of Object.entries({ soldAt: "2026-09-21", sellerId: "seller", productId: "honey", quantity: "2", customer: "  " })) form.set(key, value);
+  for (const [key, value] of Object.entries({ soldAt: "2026-09-21", sellerId: "seller", productId: "honey", quantity: "2", unitPrice: "200.00", customer: "  " })) form.set(key, value);
   return form;
 }
+
+test("special unit prices are validated and used without modifying catalog costs", () => {
+  const form = saleForm();
+  form.set("unitPrice", "175.50");
+  const input = parseSaleInput(form);
+  assert.equal(input.items[0].unitPriceCents, 17550);
+  const product = { id: "honey", name: "Miel", priceCents: 20000, costCents: 8500, active: true };
+  const seller = { id: "seller", name: "Lizeth", active: true, commissions: [{ productId: "honey", rateBps: 2000 }] };
+  const snapshot = saleSnapshot([product], seller, input.items);
+  assert.equal(snapshot.items[0].unitPriceCents, 17550);
+  assert.equal(snapshot.items[0].unitCostCents, 8500);
+  assert.equal(product.priceCents, 20000);
+  const totals = calculateSale(snapshot.items, 406);
+  assert.equal(totals.subtotal, 35100);
+  assert.equal(totals.sellerPayment, 7020);
+  assert.equal(totals.cardFee, 1425);
+  assert.equal(totals.profit, 9655);
+  for (const invalid of ["", "-1", "2.999", "NaN", "1000000.01"]) {
+    form.set("unitPrice", invalid);
+    assert.equal(parseSaleInput(form), null);
+  }
+  form.delete("unitPrice");
+  assert.equal(parseSaleInput(form), null);
+  form.set("unitPrice", "0");
+  assert.equal(parseSaleInput(form).items[0].unitPriceCents, 0);
+});
 
 test("sale input validates calendar dates, quantities, duplicate products and card rate", () => {
   assert.equal(parseSaleInput(saleForm()).customer, null);
