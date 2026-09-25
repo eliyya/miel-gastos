@@ -20,6 +20,7 @@ import {
 import { parseMoneyToCents } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { createTotpSecret, verifyTotpToken } from "@/lib/totp";
+import type { LoginState } from "@/lib/login-state";
 
 const emailSchema = z.string().trim().email().toLowerCase();
 const nameSchema = z.string().trim().max(80);
@@ -38,25 +39,39 @@ async function requireOwner() {
   return user;
 }
 
-export async function loginAction(formData: FormData) {
-  const email = emailSchema.parse(formString(formData, "email"));
-  const password = formString(formData, "password");
-  const totpCode = formString(formData, "totpCode");
-
-  const user = await prisma.user.findUnique({ where: { email } });
-
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
-    redirect("/login?error=credentials");
+export async function loginAction(_previousState: LoginState, formData: FormData): Promise<LoginState> {
+  const email = emailSchema.safeParse(formString(formData, "email"));
+  // Passwords are opaque: whitespace can be part of the user's password.
+  const password = String(formData.get("password") ?? "");
+  const totpCode = formString(formData, "totpCode").replace(/\s/g, "");
+  const fields: LoginState["fields"] = {};
+  if (!email.success) fields.email = "Escribe un correo electrónico válido.";
+  if (!password) fields.password = "Escribe tu contraseña.";
+  if (totpCode && !/^\d{6}$/.test(totpCode)) fields.totpCode = "El código debe tener 6 dígitos.";
+  if (!email.success || Object.keys(fields).length) {
+    return { error: "Revisa los campos señalados para continuar.", fields };
   }
 
-  if (user.totpEnabled) {
-    if (!user.totpSecret || !verifyTotpToken(totpCode, user.totpSecret)) {
-      redirect("/login?error=totp");
+  let destination: string;
+  try {
+    const user = await prisma.user.findUnique({ where: { email: email.data } });
+    if (!user || !(await verifyPassword(password, user.passwordHash))) {
+      return { error: "El correo o la contraseña no coinciden. Revisa tus datos e inténtalo de nuevo." };
     }
+    if (user.totpEnabled) {
+      if (!totpCode) {
+        return { error: "Falta la verificación de seguridad.", fields: { totpCode: "Abre tu app de autenticación e ingresa el código de 6 dígitos." } };
+      }
+      if (!user.totpSecret || !verifyTotpToken(totpCode, user.totpSecret)) {
+        return { error: "No pudimos verificar tu código.", fields: { totpCode: "El código es incorrecto o ya venció. Usa el código actual de tu app." } };
+      }
+    }
+    await createSession(user.id);
+    destination = user.totpEnabled ? "/" : "/totp/setup";
+  } catch {
+    return { error: "No pudimos conectar con el servicio de acceso. Espera un momento e inténtalo de nuevo." };
   }
-
-  await createSession(user.id);
-  redirect(user.totpEnabled ? "/" : "/totp/setup");
+  redirect(destination);
 }
 
 export async function logoutAction() {
