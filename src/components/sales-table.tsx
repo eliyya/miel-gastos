@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/empty-state";
 import { Fragment, useState } from "react";
 import { ChevronRight, Trash2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,7 +22,7 @@ export function SalesTable({ sales }: { sales: SaleRow[] }) {
   function toggle(id: string) {
     setExpanded((previous) => { const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   }
-  if (!sales.length) return <div className="rounded-lg border border-dashed px-4 py-12 text-center text-sm text-muted-foreground">Aún no hay ventas registradas.</div>;
+  if (!sales.length) return <EmptyState title="Cada frasco tiene una historia" description="Registra tu primera venta para ver aquí sus productos, costos y ganancias." />;
   return <>{modal}{message && <p role="status" className="mb-3 text-sm text-emerald-700">{message}</p>}<Table>
     <TableHeader><TableRow>{["", "Fecha", "Cliente", "Vendedor", "Subtotal", "Pago vendedor", "Tarjeta", "Producción", "Costo", "Ganancia", "Acciones"].map((label, i) => <TableHead key={i} className={i >= 4 ? "text-right" : ""}>{label}</TableHead>)}</TableRow></TableHeader>
     <TableBody>{sales.map((sale) => {

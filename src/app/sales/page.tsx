@@ -1,3 +1,6 @@
+import { AppShell } from "@/components/app-shell";
+import { StatCard } from "@/components/stat-card";
+import { ShoppingBag, Wallet, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { requireTotpUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -8,7 +11,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function SalesPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
-  await requireTotpUser();
+  const user = await requireTotpUser();
   const params = await searchParams;
   const [products, sellers] = await Promise.all([
     prisma.product.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
@@ -36,12 +39,12 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
       COALESCE(SUM(cost), 0)::double precision AS cost,
       COALESCE(SUM(subtotal - cost), 0)::double precision AS profit FROM costs
   `;
-  return <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white"><div className="mx-auto max-w-7xl space-y-5 px-4 py-5 sm:px-6 lg:px-8">
-    <header className="flex flex-wrap items-center justify-between gap-4 border-b pb-4"><div><h1 className="text-2xl font-semibold">Ventas de Miel</h1><p className="mt-1 text-sm text-muted-foreground">Martin del Campo · Registro de ventas y ganancias</p></div><nav className="flex gap-2"><Link href="/" className={buttonVariants({ variant: "outline" })}>Gastos</Link><Link href="/sales/catalog" className={buttonVariants({ variant: "outline" })}>Catálogos</Link></nav></header>
+  return <AppShell user={user} title="El fruto de tu trabajo" eyebrow="La libreta · Ventas" description="Tus ventas, costos y ganancias en un solo lugar. Cada frasco cuenta." actions={<SaleDialog products={products} sellers={sellers} today={today} />}>
     <section aria-label="Totales de todas las ventas" className="grid gap-4 sm:grid-cols-3">
-      {[["Vendido", totals.subtotal], ["Costo total", totals.cost], ["Ganancia", totals.profit]].map(([label, value]) => <Card key={label}><CardHeader><CardDescription>{label} · todas las ventas</CardDescription><CardTitle className="text-2xl tabular-nums">{formatMoney(Number(value))}</CardTitle></CardHeader></Card>)}
+      <StatCard label="Total vendido" value={formatMoney(totals.subtotal)} hint="Todas las ventas registradas" icon={ShoppingBag} />
+      <StatCard label="Costo total" value={formatMoney(totals.cost)} hint="Producción y comisiones" icon={Wallet} />
+      <StatCard label="Ganancia" value={formatMoney(totals.profit)} hint="Antes de los gastos de la libreta" icon={TrendingUp} featured />
     </section>
-    <div className="flex justify-end"><SaleDialog products={products} sellers={sellers} today={today} /></div>
     <Card><CardHeader><CardTitle>Ventas registradas</CardTitle><CardDescription>{count} ventas · Haz clic en una fila para ver los productos y sus cantidades.</CardDescription></CardHeader><CardContent><SalesTable sales={sales.map((sale) => ({ ...sale, soldAt: sale.soldAt.toISOString() }))} /><div className="mt-4 flex items-center justify-end gap-3 text-sm">{page > 1 && <Link className={buttonVariants({ variant: "outline" })} href={`/sales?page=${page - 1}`}>Anterior</Link>}<span>Página {page} de {pages}</span>{page < pages && <Link className={buttonVariants({ variant: "outline" })} href={`/sales?page=${page + 1}`}>Siguiente</Link>}</div></CardContent></Card>
-  </div></main>;
+  </AppShell>;
 }

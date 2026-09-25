@@ -38,9 +38,9 @@ export function useAsyncConfirm() {
     if (!open && !busy.current) finish(false);
   }}>
     <Dialog.Portal>
-      <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/45" />
-      <Dialog.Popup initialFocus={cancelButton} aria-busy={pending} className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 space-y-4 rounded-xl border bg-background p-6 shadow-xl">
-        <Dialog.Title className="text-lg font-semibold">{options?.title}</Dialog.Title>
+      <Dialog.Backdrop className="fixed inset-0 z-50 bg-primary/35 backdrop-blur-sm" />
+      <Dialog.Popup initialFocus={cancelButton} aria-busy={pending} className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 space-y-5 rounded-2xl border bg-card p-6 shadow-2xl">
+        <Dialog.Title className="font-serif text-xl">{options?.title}</Dialog.Title>
         <Dialog.Description className="text-sm text-muted-foreground">{options?.description}</Dialog.Description>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <div className="flex justify-end gap-2">

@@ -42,12 +42,14 @@ export default async function TotpSetupPage({
   const qrDataUrl = await createTotpQrDataUrl(user.email, totpSecret);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-8">
-      <Card className="w-full max-w-lg rounded-lg">
+    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
+      <Card className="w-full max-w-lg">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
+          <Image src="/brand/mmdc-logo.svg" alt="Martín del Campo" width={64} height={64} className="mb-4" />
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-honey">Un último paso</p>
+          <CardTitle className="flex items-center gap-2 font-serif text-2xl">
             <KeyRound className="size-5" />
-            Activar TOTP
+            Protege tu cuenta
           </CardTitle>
           <CardDescription>
             Escanea el QR con 1Password, Bitwarden, Google Authenticator o una app compatible.
@@ -57,7 +59,7 @@ export default async function TotpSetupPage({
           <div className="flex justify-center rounded-lg border bg-white p-4">
             <Image
               src={qrDataUrl}
-              alt="Codigo QR para configurar TOTP"
+              alt="Código QR para configurar TOTP"
               width={240}
               height={240}
               unoptimized
@@ -72,11 +74,11 @@ export default async function TotpSetupPage({
           <form action={enableTotpAction} className="grid gap-4">
             {error === "code" ? (
               <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                Codigo invalido. Revisa que la hora del dispositivo este sincronizada.
+                Código inválido. Revisa que la hora del dispositivo esté sincronizada.
               </p>
             ) : null}
             <div className="grid gap-2">
-              <Label htmlFor="code">Codigo de 6 digitos</Label>
+              <Label htmlFor="code">Código de 6 dígitos</Label>
               <Input
                 id="code"
                 name="code"
@@ -92,7 +94,7 @@ export default async function TotpSetupPage({
           <form action={regenerateTotpAction}>
             <Button type="submit" variant="outline" className="w-full">
               <RotateCcw />
-              Generar otro secreto
+              Generar una nueva clave
             </Button>
           </form>
         </CardContent>
