@@ -81,8 +81,10 @@ Pruebas de cálculos: `node --test scripts/sales.test.mjs` (Node 24).
 El registro publico esta cerrado. Para crear un usuario:
 
 ```bash
-pnpm user:create correo@ejemplo.com "password-temporal" "Nombre"
+pnpm user:create
 ```
+
+El comando solicita correo, nombre opcional, rol (ADMIN por defecto u OWNER) y contraseña con confirmación. La contraseña no se muestra mientras se escribe ni se pasa como argumento al comando. Usa Ctrl+C para cancelar. Requiere una terminal interactiva y crea la cuenta en la base configurada en `DATABASE_URL`.
 
 En el primer inicio de sesion, deja vacio el codigo TOTP. La app enviara al usuario a configurar su QR.
 
@@ -98,5 +100,5 @@ En el primer inicio de sesion, deja vacio el codigo TOTP. La app enviara al usua
 pnpm lint
 pnpm build
 pnpm db:studio
-pnpm user:create correo@ejemplo.com "password-temporal" "Nombre"
+pnpm user:create
 ```

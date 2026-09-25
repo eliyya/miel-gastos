@@ -1,0 +1,3 @@
+export default function StatisticsLoading() {
+  return <main aria-busy="true" className="mx-auto w-full max-w-7xl space-y-6 px-4 py-12 sm:px-8"><p role="status" className="text-sm text-muted-foreground">Preparando tus estadísticas…</p><div aria-hidden="true" className="space-y-6 motion-safe:animate-pulse"><div className="h-12 w-3/4 rounded-xl bg-secondary" /><div className="h-36 rounded-2xl bg-card" /><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((n) => <div key={n} className="h-40 rounded-2xl bg-card" />)}</div><div className="h-72 rounded-2xl bg-card" /></div></main>;
+}
