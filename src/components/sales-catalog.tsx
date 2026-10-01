@@ -9,7 +9,8 @@ import { useActionState } from "react";
 import { saveProductAction, saveSellerAction } from "@/app/sales/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { CatalogProduct, CatalogSeller, SalesFormState } from "@/lib/sales";
+import { NativeSelect } from "@/components/ui/native-select";
+import type { CatalogProduct, CatalogSeller, CatalogUser, SalesFormState } from "@/lib/sales";
 
 function Feedback({ state }: { state: SalesFormState }) {
   return <>{state.error && <p role="alert" className="text-sm text-destructive">{state.error}</p>}{state.success && <p role="status" className="text-sm text-emerald-700">{state.success}</p>}</>;
@@ -31,12 +32,20 @@ function ProductForm({ product }: { product?: CatalogProduct }) {
   </form>;
 }
 
-function SellerForm({ seller, products }: { seller?: CatalogSeller; products: CatalogProduct[] }) {
+function SellerForm({ seller, products, users, sellers }: { seller?: CatalogSeller; products: CatalogProduct[]; users: CatalogUser[]; sellers: CatalogSeller[] }) {
   const [state, action, pending] = useActionState(saveSellerAction, {});
   return <form action={action} className="space-y-4 rounded-xl border bg-card p-4 sm:p-5">
     <input type="hidden" name="id" value={seller?.id ?? ""} />
+    {seller && <p className="text-xs text-muted-foreground">ID del vendedor: <code className="break-all rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground">{seller.id}</code></p>}
     <fieldset disabled={pending} className="space-y-4">
       <label className="grid gap-2 text-sm">Nombre del vendedor<Input name="name" defaultValue={seller?.name} maxLength={120} required /></label>
+      <label className="grid gap-2 text-sm">Usuario asociado (opcional)
+        <NativeSelect name="userId" defaultValue={seller?.userId ?? ""}>
+          <option value="">Sin usuario asociado</option>
+          {users.map((user) => <option key={user.id} value={user.id} disabled={sellers.some((other) => other.id !== seller?.id && other.userId === user.id)}>{user.name ? `${user.name} · ${user.email}` : user.email}</option>)}
+        </NativeSelect>
+      </label>
+      <p className="text-xs text-muted-foreground">Al registrar una venta, este vendedor se seleccionará por defecto para el usuario asociado. El usuario podrá elegir otro vendedor. Cada usuario puede asociarse a un solo vendedor.</p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{products.map((product) => {
         const commission = seller?.commissions.find((c) => c.productId === product.id);
         return <label key={product.id} className="grid gap-2 text-sm">{product.name}{!product.active ? " (inactivo)" : ""} · comisión (%)<Input type="number" name={`commission:${product.id}`} min="0" max="100" step="0.01" placeholder="Sin configurar" defaultValue={commission ? (commission.rateBps / 100).toFixed(2) : ""} /></label>;
@@ -47,7 +56,7 @@ function SellerForm({ seller, products }: { seller?: CatalogSeller; products: Ca
   </form>;
 }
 
-export function SalesCatalog({ products, sellers }: { products: CatalogProduct[]; sellers: CatalogSeller[] }) {
+export function SalesCatalog({ products, sellers, users }: { products: CatalogProduct[]; sellers: CatalogSeller[]; users: CatalogUser[] }) {
   return <Tabs defaultValue="products">
     <TabsList aria-label="Catálogos de ventas"><TabsTrigger value="products"><Package className="size-4" />Productos <Badge variant="secondary">{products.length}</Badge></TabsTrigger><TabsTrigger value="sellers"><Users className="size-4" />Vendedores <Badge variant="secondary">{sellers.length}</Badge></TabsTrigger></TabsList>
     <TabsContent value="products">
@@ -58,8 +67,8 @@ export function SalesCatalog({ products, sellers }: { products: CatalogProduct[]
     </TabsContent>
     <TabsContent value="sellers">
       <Card><CardHeader><CardTitle>El equipo detrás de cada venta</CardTitle><CardDescription>Administra vendedores y define su comisión por producto.</CardDescription></CardHeader><CardContent className="space-y-4">
-        <details className="rounded-xl border border-dashed bg-secondary/30 p-4" open={!sellers.length}><summary className="font-medium">Agregar vendedor</summary><div className="mt-4"><SellerForm products={products} /></div></details>
-        {sellers.map((seller) => <SellerForm key={JSON.stringify(seller)} seller={seller} products={products} />)}
+        <details className="rounded-xl border border-dashed bg-secondary/30 p-4" open={!sellers.length}><summary className="font-medium">Agregar vendedor</summary><div className="mt-4"><SellerForm products={products} users={users} sellers={sellers} /></div></details>
+        {sellers.map((seller) => <SellerForm key={JSON.stringify(seller)} seller={seller} products={products} users={users} sellers={sellers} />)}
       </CardContent></Card>
     </TabsContent>
   </Tabs>;

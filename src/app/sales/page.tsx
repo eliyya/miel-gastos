@@ -39,7 +39,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
       COALESCE(SUM(cost), 0)::double precision AS cost,
       COALESCE(SUM(subtotal - cost), 0)::double precision AS profit FROM costs
   `;
-  return <AppShell user={user} title="El fruto de tu trabajo" eyebrow="La libreta · Ventas" description="Tus ventas, costos y ganancias en un solo lugar. Cada frasco cuenta." actions={<SaleDialog products={products} sellers={sellers} today={today} />}>
+  return <AppShell user={user} title="El fruto de tu trabajo" eyebrow="La libreta · Ventas" description="Tus ventas, costos y ganancias en un solo lugar. Cada frasco cuenta." actions={<SaleDialog products={products} sellers={sellers} today={today} defaultSellerId={sellers.find((seller) => seller.userId === user.id)?.id} />}>
     <section aria-label="Totales de todas las ventas" className="grid gap-4 sm:grid-cols-3">
       <StatCard label="Total vendido" value={formatMoney(totals.subtotal)} hint="Todas las ventas registradas" icon={ShoppingBag} />
       <StatCard label="Costo total" value={formatMoney(totals.cost)} hint="Producción y comisiones" icon={Wallet} />

@@ -15,10 +15,11 @@ import { calculateSale, DEFAULT_CARD_RATE_BPS, parseHundredths, saleSnapshot, ty
 
 type Row = { key: number; productId: string; quantity: string; unitPrice?: string };
 
-export function SaleDialog({ products, sellers, today }: {
+export function SaleDialog({ products, sellers, today, defaultSellerId = "" }: {
   products: CatalogProduct[];
   sellers: CatalogSeller[];
   today: string;
+  defaultSellerId?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -28,7 +29,8 @@ export function SaleDialog({ products, sellers, today }: {
   const [success, setSuccess] = useState("");
   const [soldAt, setSoldAt] = useState(today);
   const [customer, setCustomer] = useState("");
-  const [sellerId, setSellerId] = useState("");
+  const initialSellerId = sellers.some((seller) => seller.id === defaultSellerId && seller.active) ? defaultSellerId : "";
+  const [sellerId, setSellerId] = useState(initialSellerId);
   const [paidByCard, setPaidByCard] = useState(false);
   const [cardRate, setCardRate] = useState((DEFAULT_CARD_RATE_BPS / 100).toFixed(2));
   const [rows, setRows] = useState<Row[]>([{ key: 0, productId: "", quantity: "1" }]);
@@ -48,7 +50,7 @@ export function SaleDialog({ products, sellers, today }: {
   const updateRow = (key: number, patch: Partial<Row>) => setRows((current) => current.map((r) => r.key === key ? { ...r, ...patch } : r));
 
   function reset() {
-    setSoldAt(today); setCustomer(""); setSellerId(""); setPaidByCard(false); setCardRate((DEFAULT_CARD_RATE_BPS / 100).toFixed(2));
+    setSoldAt(today); setCustomer(""); setSellerId(initialSellerId); setPaidByCard(false); setCardRate((DEFAULT_CARD_RATE_BPS / 100).toFixed(2));
     setRows([{ key: nextKey.current++, productId: "", quantity: "1" }]); setError("");
   }
 

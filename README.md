@@ -64,6 +64,13 @@ los totales se actualizan al terminar.
 producto. Desactivar un registro conserva el historial. Una comisión vacía significa
 sin configurar; 0% significa que el vendedor no cobra comisión.
 
+Cada ficha muestra el ID del vendedor y permite asociarlo opcionalmente a un
+usuario. Un usuario puede asociarse a un solo vendedor. Al abrir «Registrar
+venta», se selecciona el vendedor activo asociado al usuario conectado; todos
+los administradores pueden cambiarlo. Sin asociación o con un vendedor
+inactivo, se solicita seleccionar uno. La asociación puede quitarse desde el
+catálogo y no modifica ventas anteriores.
+
 El esquema separa `Sale` y `SaleItem`. Cada partida conserva el nombre, precio y
 costo unitarios del producto y el porcentaje del vendedor. La venta conserva el
 nombre del vendedor, fecha sin hora, cliente opcional y tasa de tarjeta (cero sin

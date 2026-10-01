@@ -69,7 +69,14 @@ export async function saveSellerAction(_: SalesFormState, form: FormData): Promi
   await requireTotpUser();
   const id = text(form, "id");
   const name = text(form, "name");
+  const userId = text(form, "userId") || null;
   if (!name || name.length > 120) return { error: "Escribe un nombre de hasta 120 caracteres." };
+  if (userId) {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+    if (!user) return { error: "El usuario seleccionado ya no existe." };
+    const linkedSeller = await prisma.seller.findUnique({ where: { userId }, select: { id: true } });
+    if (linkedSeller && linkedSeller.id !== id) return { error: "Ese usuario ya está asociado a otro vendedor." };
+  }
   const products = await prisma.product.findMany({ select: { id: true } });
   const commissions: { productId: string; rateBps: number }[] = [];
   for (const product of products) {
@@ -80,15 +87,24 @@ export async function saveSellerAction(_: SalesFormState, form: FormData): Promi
     if (rateBps === null) return { error: "Las comisiones deben estar entre 0 y 100%, con hasta dos decimales." };
     commissions.push({ productId: product.id, rateBps });
   }
-  await prisma.$transaction(async (tx) => {
-    const seller = id
-      ? await tx.seller.update({ where: { id }, data: { name, active: form.get("active") === "on" } })
-      : await tx.seller.create({ data: { name, active: form.get("active") === "on" } });
-    // Only replace fields actually present in this form; preserve concurrently added products.
-    const submittedIds = products.filter((p) => form.has(`commission:${p.id}`)).map((p) => p.id);
-    await tx.sellerCommission.deleteMany({ where: { sellerId: seller.id, productId: { in: submittedIds } } });
-    await tx.sellerCommission.createMany({ data: commissions.map((c) => ({ ...c, sellerId: seller.id })) });
-  });
+  try {
+    await prisma.$transaction(async (tx) => {
+      const seller = id
+        ? await tx.seller.update({ where: { id }, data: { name, userId, active: form.get("active") === "on" } })
+        : await tx.seller.create({ data: { name, userId, active: form.get("active") === "on" } });
+      // Only replace fields actually present in this form; preserve concurrently added products.
+      const submittedIds = products.filter((p) => form.has(`commission:${p.id}`)).map((p) => p.id);
+      await tx.sellerCommission.deleteMany({ where: { sellerId: seller.id, productId: { in: submittedIds } } });
+      await tx.sellerCommission.createMany({ data: commissions.map((c) => ({ ...c, sellerId: seller.id })) });
+    });
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error) {
+      if (error.code === "P2002") return { error: "Ese usuario ya está asociado a otro vendedor." };
+      if (error.code === "P2003") return { error: "El usuario seleccionado ya no existe. Actualiza el catálogo." };
+      if (error.code === "P2025") return { error: "El vendedor ya no existe. Actualiza el catálogo." };
+    }
+    throw error;
+  }
   revalidatePath("/sales/catalog");
   revalidatePath("/sales");
   return { success: "Vendedor y comisiones guardados." };

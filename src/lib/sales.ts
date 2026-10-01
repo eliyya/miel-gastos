@@ -36,7 +36,8 @@ export function parseHundredths(value: unknown, max = 100_000_000): number | nul
 export type SalesFormState = { error?: string; success?: string };
 
 export type CatalogProduct = { id: string; name: string; priceCents: number; costCents: number; active: boolean };
-export type CatalogSeller = { id: string; name: string; active: boolean; commissions: { productId: string; rateBps: number }[] };
+export type CatalogSeller = { id: string; name: string; active: boolean; userId?: string | null; commissions: { productId: string; rateBps: number }[] };
+export type CatalogUser = { id: string; name: string | null; email: string };
 
 export function parseSaleInput(form: FormData) {
   const soldAt = String(form.get("soldAt") ?? "");
