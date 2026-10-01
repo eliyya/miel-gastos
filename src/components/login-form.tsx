@@ -37,12 +37,12 @@ export function LoginForm() {
         <label htmlFor="password" className="text-sm font-medium">Contraseña</label>
         <div className="relative">
           <Input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required disabled={pending} value={values.password} onChange={(e) => update("password", e.target.value)} onKeyUp={(e) => setCapsLock(e.getModifierState("CapsLock"))} onKeyDown={(e) => setCapsLock(e.getModifierState("CapsLock"))} onBlur={() => setCapsLock(false)} placeholder="Tu contraseña" className={`${inputClass} pr-12`} aria-invalid={!!state.fields?.password} aria-describedby={[state.fields?.password ? "password-error" : "", capsLock ? "caps-lock" : ""].filter(Boolean).join(" ") || undefined} />
-          <Button variant="ghost" size="icon" type="button" disabled={pending} onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} aria-pressed={showPassword} className="absolute inset-y-0 right-0 flex h-full w-12 items-center justify-center rounded-r-xl text-[#6b4a2b] outline-none hover:text-[#44240b] focus-visible:ring-2 focus-visible:ring-[#995c09]">
+          <Button variant="ghost" size="icon" type="button" disabled={pending} onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} aria-pressed={showPassword} className="absolute inset-y-0 right-0 flex h-full w-12 items-center justify-center rounded-r-xl text-[#6b4a2b] outline-none hover:text-[#44240b] focus-visible:ring-2 focus-visible:ring-honey">
             {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
           </Button>
         </div>
         {state.fields?.password && <p id="password-error" className="text-sm text-red-800">{state.fields.password}</p>}
-        {capsLock && <p id="caps-lock" role="status" className="text-sm text-[#995c09]">Tienes activadas las mayúsculas.</p>}
+        {capsLock && <p id="caps-lock" role="status" className="text-sm text-honey">Tienes activadas las mayúsculas.</p>}
       </div>
       <div className="grid gap-2">
         <label htmlFor="totpCode" className="text-sm font-medium">Código de autenticación</label>
@@ -50,7 +50,7 @@ export function LoginForm() {
         <p id="totp-help" className="text-xs leading-5 text-[#6b4a2b]">Los 6 dígitos de tu app de autenticación. Si es tu primer acceso, déjalo vacío; lo configurarás al entrar.</p>
         {state.fields?.totpCode && <p id="totp-error" className="text-sm text-red-800">{state.fields.totpCode}</p>}
       </div>
-      <Button type="submit" disabled={pending} className="mt-1 flex min-h-12 items-center justify-center gap-3 rounded-xl bg-[#44240b] px-5 py-3 text-sm font-semibold text-[#fff8ed] transition hover:bg-[#633811] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#995c09] disabled:cursor-wait disabled:opacity-70">
+      <Button type="submit" disabled={pending} className="mt-1 flex min-h-12 items-center justify-center gap-3 rounded-xl bg-[#44240b] px-5 py-3 text-sm font-semibold text-[#fff8ed] transition hover:bg-[#633811] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-honey disabled:cursor-wait disabled:opacity-70">
         {pending ? <><LoaderCircle className="size-4 motion-safe:animate-spin" aria-hidden="true" /> Verificando acceso…</> : <>Iniciar sesión <ArrowRight className="size-4" aria-hidden="true" /></>}
       </Button>
       <p role="status" aria-live="polite" className="sr-only">{pending ? "Verificando tus datos. Espera un momento." : ""}</p>

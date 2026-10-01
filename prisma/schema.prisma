@@ -74,6 +74,7 @@ model Sale {
   sellerName  String
   paidByCard  Boolean    @default(false)
   cardRateBps Int        @default(0)
+  externalEventId String? @unique
   createdAt   DateTime   @default(now())
   user        User       @relation(fields: [userId], references: [id], onDelete: Restrict)
   seller      Seller     @relation(fields: [sellerId], references: [id], onDelete: Restrict)

@@ -76,6 +76,15 @@ La ganancia es el margen de la venta; no descuenta de nuevo los gastos de la lib
 Aplicar el esquema antes de usar estas pantallas: `pnpm exec prisma migrate deploy`.
 Pruebas de cálculos: `node --test scripts/sales.test.mjs` (Node 24).
 
+## Webhook de EasyStore
+
+El endpoint `POST /api/webhooks/easystore` recibe ventas `sale.completed` de
+EasyStore, valida su firma HMAC y registra los productos con sus costos y
+comisiones configurados en este catálogo. Consulta
+[`docs/easystore-webhooks.md`](docs/easystore-webhooks.md) para configurar el
+secreto y el mapeo de IDs externos. El campo `seller.external_id` debe coincidir
+con el ID de un usuario existente de Miel Gastos para registrar la venta.
+
 ## Usuarios
 
 El registro publico esta cerrado. Para crear un usuario:

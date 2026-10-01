@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "build": "prisma generate && next build",
+    "start": "prisma migrate deploy && next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
     "db:up": "docker compose up -d postgres",
@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
+    "@oasiscode/easystore": "0.2.1",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "bcryptjs": "^3.0.3",

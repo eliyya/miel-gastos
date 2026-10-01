@@ -19,6 +19,7 @@ function ProductForm({ product }: { product?: CatalogProduct }) {
   const [state, action, pending] = useActionState(saveProductAction, {});
   return <form action={action} className="space-y-4 rounded-xl border bg-card p-4 sm:p-5">
     <input type="hidden" name="id" value={product?.id ?? ""} />
+    {product && <p className="text-xs text-muted-foreground">ID del producto: <code className="break-all rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground">{product.id}</code></p>}
     <fieldset disabled={pending} className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
         <label className="grid gap-2 text-sm">Nombre<Input name="name" defaultValue={product?.name} maxLength={120} required /></label>

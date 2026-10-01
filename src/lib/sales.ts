@@ -1,4 +1,6 @@
 // Money is stored in cents; rates in basis points (4.06% = 406).
+export const DEFAULT_CARD_RATE_BPS = 406;
+
 export type SaleLine = {
   quantity: number;
   unitPriceCents: number;

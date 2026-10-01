@@ -11,7 +11,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { formatMoney } from "@/lib/format";
-import { calculateSale, parseHundredths, saleSnapshot, type CatalogProduct, type CatalogSeller } from "@/lib/sales";
+import { calculateSale, DEFAULT_CARD_RATE_BPS, parseHundredths, saleSnapshot, type CatalogProduct, type CatalogSeller } from "@/lib/sales";
 
 type Row = { key: number; productId: string; quantity: string; unitPrice?: string };
 
@@ -30,7 +30,7 @@ export function SaleDialog({ products, sellers, today }: {
   const [customer, setCustomer] = useState("");
   const [sellerId, setSellerId] = useState("");
   const [paidByCard, setPaidByCard] = useState(false);
-  const [cardRate, setCardRate] = useState("4.06");
+  const [cardRate, setCardRate] = useState((DEFAULT_CARD_RATE_BPS / 100).toFixed(2));
   const [rows, setRows] = useState<Row[]>([{ key: 0, productId: "", quantity: "1" }]);
   const nextKey = useRef(1);
   const seller = sellers.find((s) => s.id === sellerId);
@@ -48,7 +48,7 @@ export function SaleDialog({ products, sellers, today }: {
   const updateRow = (key: number, patch: Partial<Row>) => setRows((current) => current.map((r) => r.key === key ? { ...r, ...patch } : r));
 
   function reset() {
-    setSoldAt(today); setCustomer(""); setSellerId(""); setPaidByCard(false); setCardRate("4.06");
+    setSoldAt(today); setCustomer(""); setSellerId(""); setPaidByCard(false); setCardRate((DEFAULT_CARD_RATE_BPS / 100).toFixed(2));
     setRows([{ key: nextKey.current++, productId: "", quantity: "1" }]); setError("");
   }
 
