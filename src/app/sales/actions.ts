@@ -14,6 +14,7 @@ export async function deleteSaleAction(id: string): Promise<SalesFormState> {
   // SaleItem is removed by the database's ON DELETE CASCADE; retries are harmless.
   await prisma.sale.deleteMany({ where: { id } });
   revalidatePath("/sales");
+  revalidatePath("/");
   return { success: "Venta eliminada correctamente." };
 }
 
@@ -40,7 +41,10 @@ export async function createSaleAction(form: FormData): Promise<SalesFormState> 
     } });
     return { success: "Venta registrada correctamente." };
   }, { isolationLevel: "RepeatableRead" });
-  if (result.success) revalidatePath("/sales");
+  if (result.success) {
+    revalidatePath("/sales");
+    revalidatePath("/");
+  }
   return result;
 }
 
@@ -62,6 +66,7 @@ export async function saveProductAction(_: SalesFormState, form: FormData): Prom
   }
   revalidatePath("/sales/catalog");
   revalidatePath("/sales");
+  revalidatePath("/");
   return { success: "Producto guardado. Las ventas anteriores conservan sus valores." };
 }
 
@@ -107,5 +112,6 @@ export async function saveSellerAction(_: SalesFormState, form: FormData): Promi
   }
   revalidatePath("/sales/catalog");
   revalidatePath("/sales");
+  revalidatePath("/");
   return { success: "Vendedor y comisiones guardados." };
 }

@@ -8,3 +8,4 @@ ignoredBuiltDependencies:
   - unrs-resolver
 minimumReleaseAgeExclude:
   - '@oasiscode/easystore@0.2.1'
+  - lucide-react@1.55.0

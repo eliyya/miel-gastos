@@ -16,11 +16,11 @@ export function StatisticsFilters({ start, end, grouping, today }: { start: stri
   const [error, setError] = useState("");
   return <div className="space-y-4 rounded-2xl border bg-card p-5 sm:p-6">
     <div className="flex flex-wrap items-center justify-between gap-3"><p className="flex items-center gap-2 text-sm font-semibold"><CalendarRange className="size-4 text-honey" aria-hidden="true" />Elige tu período</p><div className="flex flex-wrap gap-2">
-      <Link href="/statistics" className={buttonVariants({ variant: "outline", size: "sm" })}>Todo el historial</Link>
-      <Link href={`/statistics?start=${today.slice(0, 4)}-01-01&end=${today}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>Este año</Link>
-      <Link href={`/statistics?start=${today.slice(0, 7)}-01&end=${today}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>Este mes</Link>
+      <Link href="/" className={buttonVariants({ variant: "outline", size: "sm" })}>Todo el historial</Link>
+      <Link href={`/?start=${today.slice(0, 4)}-01-01&end=${today}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>Este año</Link>
+      <Link href={`/?start=${today.slice(0, 7)}-01&end=${today}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>Este mes</Link>
     </div></div>
-    <form action="/statistics" method="get" aria-busy={pending} onSubmit={(event) => {
+    <form action="/" method="get" aria-busy={pending} onSubmit={(event) => {
       event.preventDefault();
       const data = new FormData(event.currentTarget);
       const from = String(data.get("start") ?? ""); const to = String(data.get("end") ?? "");
@@ -28,7 +28,7 @@ export function StatisticsFilters({ start, end, grouping, today }: { start: stri
       setError("");
       const query = new URLSearchParams();
       for (const [key, value] of data) if (value) query.set(key, String(value));
-      startTransition(() => router.push(`/statistics?${query}`));
+      startTransition(() => router.push(`/?${query}`));
     }} className="grid items-end gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
       <div className="grid min-w-0 gap-2"><Label htmlFor="stats-start">Fecha inicial</Label><Input id="stats-start" name="start" type="date" defaultValue={start} disabled={pending} aria-describedby="stats-dates-help" /></div>
       <div className="grid min-w-0 gap-2"><Label htmlFor="stats-end">Fecha final</Label><Input id="stats-end" name="end" type="date" defaultValue={end} disabled={pending} aria-describedby="stats-dates-help" /></div>

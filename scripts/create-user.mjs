@@ -1,4 +1,6 @@
-import "dotenv/config";
+try {
+process.loadEnvFile()
+} catch {}
 
 import { hash } from "bcryptjs";
 import { randomUUID } from "node:crypto";

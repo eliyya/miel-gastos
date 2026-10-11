@@ -34,6 +34,16 @@ APP_OWNER_PASSWORD="change-me-12345"
 
 En esta maquina, `.env` apunta a la base de Supabase del proyecto.
 
+## Navegación
+
+La página principal (`/`) muestra las estadísticas del negocio y permite registrar
+gastos y ventas mediante los botones del encabezado, sin salir del resumen.
+Los filtros de fechas y agrupación se conservan al guardar un movimiento.
+La sección de gastos tiene su propia ruta, `/expenses`, con el diálogo de registro y los
+últimos 40 movimientos. La tabla incluye proveedor, método de pago, moneda,
+responsable y fecha de registro. `/statistics` redirige al inicio conservando los filtros
+de los enlaces anteriores.
+
 ## Flujo de usuario
 
 1. Crea usuarios manualmente desde consola.
@@ -102,7 +112,7 @@ pnpm user:create
 
 El comando solicita correo, nombre opcional, rol (ADMIN por defecto u OWNER) y contraseña con confirmación. La contraseña no se muestra mientras se escribe ni se pasa como argumento al comando. Usa Ctrl+C para cancelar. Requiere una terminal interactiva y crea la cuenta en la base configurada en `DATABASE_URL`.
 
-En el primer inicio de sesion, deja vacio el codigo TOTP. La app enviara al usuario a configurar su QR.
+El login solicita primero correo y contraseña. Si el usuario tiene TOTP activo, solicita el código en un segundo paso. En el primer acceso, la app envía al usuario a configurar su QR.
 
 ## Datos iniciales
 

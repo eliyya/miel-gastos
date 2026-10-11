@@ -54,7 +54,7 @@ test("creates a seller with an optional user and preserves zero commission", asy
   assert.ok((await h.saveSellerAction({}, sellerForm())).success);
   assert.equal(h.writes[0].data.userId, "user-1");
   assert.equal(h.writes[2].data[0].rateBps, 0);
-  assert.deepEqual(h.invalidated, ["/sales/catalog", "/sales"]);
+  assert.deepEqual(h.invalidated, ["/sales/catalog", "/sales", "/"]);
 });
 
 test("can remove a seller's user association", async () => {

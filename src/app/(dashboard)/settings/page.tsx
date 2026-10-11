@@ -57,7 +57,7 @@ export default async function SettingsPage({
       : [];
 
   return (
-    <AppShell user={user} title="Tu cuenta, bien cuidada" eyebrow="La libreta · Mi cuenta" description="Administra tu perfil, tus accesos y la seguridad del equipo.">
+    <AppShell title="Tu cuenta, bien cuidada" eyebrow="La libreta · Mi cuenta" description="Administra tu perfil, tus accesos y la seguridad del equipo.">
         {errorMessage ? (
           <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {errorMessage}

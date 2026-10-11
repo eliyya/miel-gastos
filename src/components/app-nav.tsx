@@ -7,9 +7,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { href: "/", label: "Gastos", icon: ReceiptText },
+  { href: "/", label: "Estadísticas", icon: ChartNoAxesCombined },
+  { href: "/expenses", label: "Gastos", icon: ReceiptText },
   { href: "/sales", label: "Ventas", icon: ShoppingBag },
-  { href: "/statistics", label: "Estadísticas", icon: ChartNoAxesCombined },
   { href: "/sales/catalog", label: "Catálogos", icon: BookOpen },
   { href: "/settings", label: "Mi cuenta", icon: Settings2 },
 ];

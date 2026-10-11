@@ -47,7 +47,6 @@ export async function loginAction(_previousState: LoginState, formData: FormData
   const fields: LoginState["fields"] = {};
   if (!email.success) fields.email = "Escribe un correo electrónico válido.";
   if (!password) fields.password = "Escribe tu contraseña.";
-  if (totpCode && !/^\d{6}$/.test(totpCode)) fields.totpCode = "El código debe tener 6 dígitos.";
   if (!email.success || Object.keys(fields).length) {
     return { error: "Revisa los campos señalados para continuar.", fields };
   }
@@ -60,10 +59,13 @@ export async function loginAction(_previousState: LoginState, formData: FormData
     }
     if (user.totpEnabled) {
       if (!totpCode) {
-        return { error: "Falta la verificación de seguridad.", fields: { totpCode: "Abre tu app de autenticación e ingresa el código de 6 dígitos." } };
+        return { step: "totp" };
+      }
+      if (!/^\d{6}$/.test(totpCode)) {
+        return { step: "totp", error: "Revisa el código de autenticación.", fields: { totpCode: "El código debe tener 6 dígitos." } };
       }
       if (!user.totpSecret || !verifyTotpToken(totpCode, user.totpSecret)) {
-        return { error: "No pudimos verificar tu código.", fields: { totpCode: "El código es incorrecto o ya venció. Usa el código actual de tu app." } };
+        return { step: "totp", error: "No pudimos verificar tu código.", fields: { totpCode: "El código es incorrecto o ya venció. Usa el código actual de tu app." } };
       }
     }
     await createSession(user.id);
@@ -97,7 +99,7 @@ export async function updateProfileAction(formData: FormData) {
     data: { email, name },
   });
 
-  revalidatePath("/");
+  revalidatePath("/(dashboard)", "layout");
   revalidatePath("/settings");
   redirect("/settings?updated=profile");
 }
@@ -228,17 +230,21 @@ export async function regenerateTotpAction() {
   redirect("/totp/setup");
 }
 
-export async function createExpenseAction(formData: FormData) {
+export async function saveExpenseAction(formData: FormData): Promise<{ error?: string; success?: string }> {
   const user = await requireTotpUser();
   const amountCents = parseMoneyToCents(formData.get("amount"));
   const description = formString(formData, "description");
   const category = formString(formData, "category") || "General";
   const vendor = formString(formData, "vendor") || null;
-  const paymentMethod = formString(formData, "paymentMethod") || null;
+  const paymentMethod = formString(formData, "paymentMethod");
   const spentAtInput = formString(formData, "spentAt");
 
   if (!amountCents || !description || !spentAtInput) {
-    redirect("/?error=expense");
+    return { error: "Revisa monto, fecha y descripción." };
+  }
+
+  if (!["Efectivo", "Débito", "Crédito", "Transferencia"].includes(paymentMethod)) {
+    return { error: "Selecciona un método de pago: efectivo, débito, crédito o transferencia." };
   }
 
   await prisma.expense.create({
@@ -254,7 +260,13 @@ export async function createExpenseAction(formData: FormData) {
   });
 
   revalidatePath("/");
-  redirect("/");
+  revalidatePath("/expenses");
+  return { success: "Gasto registrado correctamente." };
+}
+
+export async function createExpenseAction(formData: FormData) {
+  const result = await saveExpenseAction(formData);
+  redirect(result.error ? "/expenses?error=expense" : "/expenses");
 }
 
 export async function deleteExpenseAction(formData: FormData) {
@@ -268,5 +280,6 @@ export async function deleteExpenseAction(formData: FormData) {
   });
 
   revalidatePath("/");
-  redirect("/");
+  revalidatePath("/expenses");
+  redirect("/expenses");
 }

@@ -32,7 +32,7 @@ const user = { id: 'test-user', passwordHash: 'hash', totpEnabled: true, totpSec
 const credentials = { email: 'person@example.com', password: ' secret ' };
 test('invalid fields return actionable errors without creating a session', async () => {
   const h = harness(); const result = await h.login({ email: 'invalid', password: '', totpCode: 'abc' });
-  assert.ok(result.fields.email); assert.ok(result.fields.password); assert.ok(result.fields.totpCode); assert.equal(h.sessions.length, 0);
+  assert.ok(result.fields.email); assert.ok(result.fields.password); assert.equal(h.sessions.length, 0);
 });
 test('unknown account and wrong password share the same error', async () => {
   const unknown = await harness().login(credentials);
@@ -40,7 +40,7 @@ test('unknown account and wrong password share the same error', async () => {
   assert.equal(unknown.error, wrong.error);
 });
 test('missing and expired TOTP do not create sessions', async () => {
-  const h = harness({ user }); assert.ok((await h.login(credentials)).fields.totpCode); assert.equal(h.sessions.length, 0);
+  const h = harness({ user }); const challenge = await h.login(credentials); assert.equal(challenge.step, "totp"); assert.equal(challenge.error, undefined); assert.equal(h.sessions.length, 0);
   const expired = harness({ user, validCode: false }); assert.ok((await expired.login({ ...credentials, totpCode: '123456' })).fields.totpCode); assert.equal(expired.sessions.length, 0);
 });
 test('valid TOTP creates session and redirects; password whitespace is preserved', async () => {
@@ -52,4 +52,12 @@ test('first access redirects to setup', async () => {
 });
 test('service outage is explained without leaking internal details', async () => {
   const result = await harness({ outage: true }).login(credentials); assert.match(result.error, /servicio de acceso/); assert.doesNotMatch(result.error, /database/);
+});
+
+test('malformed TOTP stays on second step only after password verification', async () => {
+  const h = harness({ user });
+  const result = await h.login({ ...credentials, totpCode: 'abc' });
+  assert.equal(result.step, 'totp'); assert.ok(result.fields.totpCode); assert.equal(h.sessions.length, 0);
+  const wrong = await h.login({ ...credentials, password: 'wrong', totpCode: 'abc' });
+  assert.equal(wrong.step, undefined); assert.equal(wrong.fields, undefined);
 });

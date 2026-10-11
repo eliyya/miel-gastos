@@ -1,3 +1,5 @@
+import { ExpenseDialog } from "@/components/expense-dialog";
+import { SaleDialog } from "@/components/sale-dialog";
 import type { Metadata } from "next";
 import { ArrowDownLeft, ArrowUpRight, ChartNoAxesCombined, CircleHelp, Package, ReceiptText, Scale, ShoppingBag } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
@@ -21,10 +23,19 @@ const signedClass = (value: number) => value < 0 ? "text-destructive" : "text-em
 export default async function StatisticsPage({ searchParams }: { searchParams: Promise<Params> }) {
   const user = await requireTotpUser();
   const params = await searchParams;
+  const [products, sellers] = await Promise.all([
+    prisma.product.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+    prisma.seller.findMany({ where: { active: true }, include: { commissions: true }, orderBy: { name: "asc" } }),
+  ]);
+  const today = mexicoDate(new Date());
+  const actions = <div className="flex flex-wrap items-center gap-3">
+    <ExpenseDialog today={today} />
+    <SaleDialog products={products} sellers={sellers} today={today} defaultSellerId={sellers.find((seller) => seller.userId === user.id)?.id} />
+  </div>;
   const { range, error } = parseStatisticsRange(params.start, params.end);
   const grouping: Granularity = params.group === "day" || params.group === "year" ? params.group : "month";
-  const filters = <StatisticsFilters key={`${range.start}:${range.end}:${grouping}`} start={range.start ?? ""} end={range.end ?? ""} grouping={grouping} today={mexicoDate(new Date())} />;
-  if (error) return <AppShell user={user} title="Los números de tu miel" eyebrow="La libreta · Estadísticas" description="Consulta el historial completo o elige un período para entender cómo va tu negocio.">{filters}<p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive">{error}</p></AppShell>;
+  const filters = <StatisticsFilters key={`${range.start}:${range.end}:${grouping}`} start={range.start ?? ""} end={range.end ?? ""} grouping={grouping} today={today} />;
+  if (error) return <AppShell actions={actions} title="Los números de tu miel" eyebrow="La libreta · Estadísticas" description="Consulta el historial completo o elige un período para entender cómo va tu negocio.">{filters}<p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive">{error}</p></AppShell>;
 
   // Read the entire selected history, independently of the 40-row listing pages.
   // Fetch a broad timestamp window for expenses, then apply Mexico calendar dates.
@@ -44,7 +55,7 @@ export default async function StatisticsPage({ searchParams }: { searchParams: P
   const t = stats.totals;
   const hasData = t.sales + t.expenseCount > 0;
   const strongest = t.sales ? [...stats.periods].sort((a, b) => b.income - a.income)[0] : null;
-  return <AppShell user={user} title="Los números de tu miel" eyebrow="La libreta · Estadísticas" description="Una mirada a tus ventas, gastos y márgenes. Del primer registro hasta hoy, o justo el período que necesitas.">
+  return <AppShell actions={actions} title="Los números de tu miel" eyebrow="La libreta · Estadísticas" description="Una mirada a tus ventas, gastos y márgenes. Del primer registro hasta hoy, o justo el período que necesitas.">
     {filters}
     <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
       <Badge variant="secondary">{!range.start && !range.end ? "Historial completo" : "Período personalizado"}</Badge>
