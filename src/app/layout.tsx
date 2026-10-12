@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Libre_Baskerville, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -17,6 +17,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Miel · Gastos y ventas",
   description: "Registro de gastos y ventas para el negocio de miel Martin del Campo.",
+  applicationName: "Miel Gastos",
+  appleWebApp: {
+    capable: true,
+    title: "Miel Gastos",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#44240B",
 };
 
 export default function RootLayout({
