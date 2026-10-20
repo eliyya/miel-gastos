@@ -9,14 +9,14 @@ import * as salesModule from "../src/lib/sales.ts";
 const source = readFileSync(new URL("../src/app/api/webhooks/easystore/route.ts", import.meta.url), "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 
-function harness(userExists) {
+function harness({ sellerExists = true, userId = "linked-user", ownerExists = true } = {}) {
   const lookups = [];
   const sales = [];
   const prisma = {
-    user: { async findUnique(query) { lookups.push(query.where); return userExists ? { id: "local-user" } : null; } },
+    user: { async findFirst(query) { lookups.push(query.where); return ownerExists ? { id: "owner-user" } : null; } },
     sale: { async findUnique() { return null; }, async create({ data }) { sales.push(data); return { id: "local-sale" }; } },
     product: { async findMany() { return [{ id: "local-product", name: "Miel", costCents: 500 }]; } },
-    seller: { async findMany() { return [{ id: "local-seller", name: "Lizeth", commissions: [{ productId: "local-product", rateBps: 0 }] }]; } },
+    seller: { async findUnique(query) { lookups.push(query.where); return sellerExists && query.where.id === "local-seller" ? { id: "local-seller", name: "Eli", userId, commissions: [{ productId: "local-product", rateBps: 0 }] } : null; } },
     async $transaction(callback) { return callback(prisma); },
   };
   const exports = {};
@@ -53,33 +53,51 @@ function request(externalId, paymentMethod = "cash") {
   });
 }
 
-test("rejects missing external user ID even with email fallback configured", async () => {
-  const h = harness(true);
+test("rejects missing external seller ID", async () => {
+  const h = harness();
   assert.equal((await h.POST(request(null))).status, 422);
   assert.equal(h.lookups.length, 0);
   assert.equal(h.sales.length, 0);
 });
 
-test("rejects external ID that does not identify a local user", async () => {
-  const h = harness(false);
-  assert.equal((await h.POST(request("unknown-user"))).status, 422);
-  assert.equal(h.lookups[0].id, "unknown-user");
+test("rejects unknown seller instead of matching the source ID or name", async () => {
+  const h = harness();
+  assert.equal((await h.POST(request("unknown-seller"))).status, 422);
+  assert.equal(h.lookups[0].id, "unknown-seller");
   assert.equal(h.sales.length, 0);
 });
 
-test("records the sale under the user identified by seller.external_id", async () => {
-  const h = harness(true);
-  assert.equal((await h.POST(request("local-user"))).status, 201);
-  assert.equal(h.lookups[0].id, "local-user");
+test("records the mapped seller and linked user even when source name differs", async () => {
+  const h = harness();
+  assert.equal((await h.POST(request("local-seller"))).status, 201);
+  assert.equal(h.lookups[0].id, "local-seller");
+  assert.equal(h.lookups.length, 1);
   assert.equal(h.sales.length, 1);
-  assert.equal(h.sales[0].userId, "local-user");
+  assert.equal(h.sales[0].userId, "linked-user");
   assert.equal(h.sales[0].sellerId, "local-seller");
+  assert.equal(h.sales[0].sellerName, "Eli");
   assert.equal(h.sales[0].cardRateBps, 0);
 });
 
+test("uses the owner when the seller has no linked user", async () => {
+  const h = harness({ userId: null });
+  assert.equal((await h.POST(request("local-seller"))).status, 201);
+  assert.equal(h.lookups[1].role, "OWNER");
+  assert.equal(h.sales[0].userId, "owner-user");
+  assert.equal(h.sales[0].sellerId, "local-seller");
+});
+
+test("rejects a seller without a linked user when no owner exists", async () => {
+  const h = harness({ userId: null, ownerExists: false });
+  const response = await h.POST(request("local-seller"));
+  assert.equal(response.status, 422);
+  assert.match((await response.json()).error, /no existe un owner/);
+  assert.equal(h.sales.length, 0);
+});
+
 test("card sales use the same default rate as the app", async () => {
-  const h = harness(true);
-  assert.equal((await h.POST(request("local-user", "card"))).status, 201);
+  const h = harness();
+  assert.equal((await h.POST(request("local-seller", "card"))).status, 201);
   assert.equal(h.sales[0].paidByCard, true);
   assert.equal(h.sales[0].cardRateBps, salesModule.DEFAULT_CARD_RATE_BPS);
   assert.equal(h.sales[0].cardRateBps, 406);

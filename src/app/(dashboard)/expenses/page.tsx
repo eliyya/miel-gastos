@@ -1,3 +1,4 @@
+import { last30Days } from "@/lib/chart-range";
 import { Suspense, cache } from "react";
 import { ExpenseDialog } from "@/components/expense-dialog";
 import { mexicoDate } from "@/lib/statistics";
@@ -54,24 +55,21 @@ async function ExpenseRegistration() {
 async function MonthlyExpenses() {
   await getUser();
   const today = mexicoDate(new Date());
-  const month = today.slice(0, 7);
-  const monthStart = new Date(`${month}-01T00:00:00-06:00`);
-  const nextMonth = new Date(monthStart);
-  nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
-
+  const { days, start, endExclusive } = last30Days(today);
+  const rangeStart = new Date(`${start}T00:00:00-06:00`);
+  const rangeEnd = new Date(`${endExclusive}T00:00:00-06:00`);
   const monthExpenses = await prisma.expense.findMany({
-    where: { spentAt: { gte: monthStart, lt: nextMonth } },
+    where: { spentAt: { gte: rangeStart, lt: rangeEnd } },
     select: { spentAt: true, amountCents: true, currency: true },
   });
 
-  const daysInMonth = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5)), 0)).getUTCDate();
-  const days = Array.from({ length: daysInMonth }, (_, index) => ({ day: index + 1, amount: 0, count: 0 }));
+  const byDate = new Map(days.map(day => [day.date, day]));
   for (const expense of monthExpenses) {
-    const day = days[Number(mexicoDate(expense.spentAt).slice(8)) - 1];
+    const day = byDate.get(mexicoDate(expense.spentAt))!;
     day.count++;
     if (expense.currency === "MXN") day.amount += expense.amountCents;
   }
-  return <ExpenseMonthCharts days={days} month={month} today={Number(today.slice(8))} />;
+  return <ExpenseMonthCharts days={days} />;
 }
 
 async function RecentExpenses() {
@@ -161,7 +159,7 @@ async function RecentExpenses() {
 function ChartsLoading() {
   return <section aria-label="Cargando gráficas de gastos" aria-busy="true" className="grid gap-4 lg:grid-cols-2">
     <span role="status" className="sr-only">Cargando gráficas de gastos…</span>
-    {["Gastos del mes", "Movimientos del mes"].map((title, index) => <Card key={title} className={index === 0 ? "min-h-58 bg-primary text-primary-foreground ring-primary" : "min-h-58"}>
+    {["Gastos · últimos 30 días", "Movimientos · últimos 30 días"].map((title, index) => <Card key={title} className={index === 0 ? "min-h-58 bg-primary text-primary-foreground ring-primary" : "min-h-58"}>
       <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
       <CardContent aria-hidden="true" className="space-y-5 motion-safe:animate-pulse"><div className="h-8 w-28 rounded-lg bg-current opacity-10" /><div className="h-16 rounded-lg bg-current opacity-10" /></CardContent>
     </Card>)}

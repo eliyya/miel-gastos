@@ -22,10 +22,12 @@ Define en el entorno de Miel Gastos:
 EASYSTORE_WEBHOOK_SECRET="el-mismo-secreto-configurado-en-easystore"
 ```
 
-`seller.external_id` debe contener el ID de un usuario existente de Miel
-Gastos. Si falta o no coincide, el endpoint responde `422` y no registra la
-venta. Ese usuario queda guardado en `Sale.userId`; no se usa un email ni un
-usuario predeterminado para esta integración.
+`seller.external_id` debe contener el ID de un vendedor existente de Miel
+Gastos (`Seller.id`), visible en `/sales/catalog`. Si falta o no coincide,
+el endpoint responde `422` y no registra la venta. El vendedor queda guardado
+en `Sale.sellerId`. Para `Sale.userId` se usa su usuario vinculado (`Seller.userId`);
+si no tiene uno, se usa el usuario con rol `OWNER` más antiguo (por fecha de
+creación y luego ID). Si tampoco existe un owner, se responde `422`.
 
 `EASYSTORE_STORE_EXTERNAL_ID` es opcional; cuando existe,
 solo se aceptan eventos cuyo `store.external_id` coincida. Si el pago se hizo
@@ -42,10 +44,10 @@ se muestra en `/sales/catalog` en Miel Gastos. El endpoint usa
 comisión vigentes al momento de importar la venta; esos valores quedan
 guardados como una instantánea en la venta.
 
-El vendedor del catálogo, usado para sus comisiones, se busca por su ID de
-origen y después por nombre, ignorando mayúsculas, acentos y espacios
-repetidos. Si no hay una coincidencia única, el evento se rechaza para evitar
-registrar una venta en el vendedor equivocado.
+El vendedor se busca exclusivamente comparando `seller.external_id` con
+`Seller.id` de Miel Gastos. `seller.id` es el ID interno del usuario de
+EasyStore y no se usa para buscar en Miel. Tampoco se usa el nombre para mapear
+vendedores. El nombre y las comisiones se toman del vendedor de Miel.
 
 Los impuestos no están contemplados en el modelo actual de Miel Gastos. Por
 eso solo se aceptan eventos con `tax = 0` y con subtotal/total iguales a la

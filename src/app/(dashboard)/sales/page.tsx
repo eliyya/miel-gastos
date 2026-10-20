@@ -1,3 +1,4 @@
+import { last30Days } from "@/lib/chart-range";
 import { Suspense, cache } from "react";
 import { AppShell } from "@/components/app-shell";
 import { SalesMonthCharts } from "@/components/expense-month-charts";
@@ -41,25 +42,22 @@ async function SaleRegistration() {
 async function MonthlySales() {
   await getUser();
   const today = getToday();
-  const month = today.slice(0, 7);
-  // soldAt is a date-only value stored at UTC midnight.
-  const monthStart = new Date(`${month}-01T00:00:00Z`);
-  const nextMonth = new Date(monthStart);
-  nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
+  const { days, start, endExclusive } = last30Days(today);
+  const rangeStart = new Date(`${start}T00:00:00Z`);
+  const rangeEnd = new Date(`${endExclusive}T00:00:00Z`);
   const monthSales = await prisma.sale.findMany({
-    where: { soldAt: { gte: monthStart, lt: nextMonth } },
+    where: { soldAt: { gte: rangeStart, lt: rangeEnd } },
     select: { soldAt: true, items: { select: { quantity: true, unitPriceCents: true } } },
   });
-  const daysInMonth = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5)), 0)).getUTCDate();
-  const days = Array.from({ length: daysInMonth }, (_, index) => ({ day: index + 1, amount: 0, count: 0 }));
+  const byDate = new Map(days.map(day => [day.date, day]));
   for (const sale of monthSales) {
-    const day = days[sale.soldAt.getUTCDate() - 1];
+    const day = byDate.get(sale.soldAt.toISOString().slice(0, 10))!;
     for (const item of sale.items) {
       day.amount += item.quantity * item.unitPriceCents;
       day.count += item.quantity;
     }
   }
-  return <SalesMonthCharts days={days} month={month} today={Number(today.slice(8))} />;
+  return <SalesMonthCharts days={days} />;
 }
 
 async function RegisteredSales({ searchParams }: { searchParams: SalesParams }) {
@@ -78,7 +76,7 @@ async function RegisteredSales({ searchParams }: { searchParams: SalesParams }) 
 function ChartsLoading() {
   return <section aria-label="Cargando gráficas de ventas" aria-busy="true" className="grid gap-4 lg:grid-cols-2">
     <span role="status" className="sr-only">Cargando gráficas de ventas…</span>
-    {["Ventas del mes", "Productos vendidos"].map((title, index) => <Card key={title} className={index === 0 ? "min-h-58 bg-primary text-primary-foreground ring-primary" : "min-h-58"}>
+    {["Ventas · últimos 30 días", "Productos vendidos"].map((title, index) => <Card key={title} className={index === 0 ? "min-h-58 bg-primary text-primary-foreground ring-primary" : "min-h-58"}>
       <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
       <CardContent aria-hidden="true" className="space-y-5 motion-safe:animate-pulse"><div className="h-8 w-28 rounded-lg bg-current opacity-10" /><div className="h-16 rounded-lg bg-current opacity-10" /></CardContent>
     </Card>)}

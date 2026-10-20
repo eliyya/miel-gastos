@@ -10,7 +10,6 @@ import {
   MAX_IMPORTED_SALE_CENTS,
   mexicoDate,
   moneyToCents,
-  normalizeComparableName,
   parseEasystoreSaleCompletedEvent,
   validateEasystoreEventBounds,
   verifyEasystoreSignature,
@@ -90,13 +89,22 @@ export async function POST(request: Request) {
   }
 
   if (!event.seller.external_id) {
-    return errorResponse("Falta seller.external_id: debe ser el ID de un usuario de Miel Gastos.", 422);
+    return errorResponse("Falta seller.external_id: debe ser el ID de un vendedor de Miel Gastos.", 422);
   }
-  const user = await prisma.user.findUnique({
+  const seller = await prisma.seller.findUnique({
     where: { id: event.seller.external_id },
-    select: { id: true },
+    include: { commissions: true },
   });
-  if (!user) return errorResponse("seller.external_id no corresponde a un usuario de Miel Gastos.", 422);
+  if (!seller) return errorResponse("seller.external_id no corresponde a un vendedor de Miel Gastos.", 422);
+
+  const userId = seller.userId ?? (await prisma.user.findFirst({
+    where: { role: "OWNER" },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: { id: true },
+  }))?.id;
+  if (!userId) {
+    return errorResponse("El vendedor no tiene un usuario vinculado y no existe un owner para registrar la venta.", 422);
+  }
 
   const existing = await prisma.sale.findUnique({
     where: { externalEventId: event.id },
@@ -119,18 +127,6 @@ export async function POST(request: Request) {
   const missingProduct = productKeys.find((productKey) => !productsById.has(productKey));
   if (missingProduct) {
     return errorResponse(`No existe un producto con ID ${missingProduct}. Configúralo como ID externo en EasyStore.`, 422);
-  }
-
-  const sellers = await prisma.seller.findMany({
-    include: { commissions: true },
-  });
-  const sellerBySourceId = sellers.find((seller) => seller.id === event.seller.id);
-  const matchingSellers = sellers.filter(
-    (seller) => normalizeComparableName(seller.name) === normalizeComparableName(event.seller.name),
-  );
-  const seller = sellerBySourceId ?? (matchingSellers.length === 1 ? matchingSellers[0] : undefined);
-  if (!seller) {
-    return errorResponse(`No se pudo mapear al vendedor ${event.seller.name}. Usa un nombre único en el catálogo de vendedores.`, 422);
   }
 
   const lineItems: ImportedLineItem[] = [];
@@ -191,11 +187,11 @@ export async function POST(request: Request) {
         const sale = await tx.sale.create({
           data: {
             externalEventId: event.id,
-            userId: user.id,
+            userId,
             soldAt: new Date(`${soldAt}T00:00:00.000Z`),
             customer: null,
             sellerId: seller.id,
-            sellerName: event.seller.name,
+            sellerName: seller.name,
             paidByCard,
             cardRateBps: importedCardRateBps,
             createdAt,
