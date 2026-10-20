@@ -16,11 +16,55 @@ desfase y cuerpos de más de 1 MB.
 
 ## Configuración
 
-Define en el entorno de Miel Gastos:
+Antes de desplegar, aplica las migraciones (`pnpm exec prisma migrate deploy`) y
+define en el entorno del servidor una clave de cifrado de 32 bytes en base64:
 
-```env
-EASYSTORE_WEBHOOK_SECRET="el-mismo-secreto-configurado-en-easystore"
+```bash
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
 ```
+
+Guarda el resultado como `EASYSTORE_WEBHOOK_ENCRYPTION_KEY` en el gestor de
+secretos del despliegue, igual en todas las instancias. Esta clave cifra el secreto
+del webhook con AES-256-GCM; debe mantenerse fuera de la base de datos, el código
+y los logs. Conserva una copia segura: cambiarla invalida el descifrado de los
+secretos guardados. Si se pierde o cambia, genera un secreto nuevo desde Ajustes
+y actualiza EasyStore. La aplicación nunca registra los secretos ni los errores
+internos de estas operaciones en logs.
+
+1. Inicia sesión con una cuenta **OWNER**, con TOTP configurado, y abre **Mi cuenta**
+   (`/settings`), sección **Webhook de EasyStore**.
+2. Pulsa **Generar secreto**. Copia el valor y configura en EasyStore la URL pública
+   HTTPS de `POST /api/webhooks/easystore` y ese secreto.
+3. Pulsa **Ya lo guardé; ocultar** y después **Activar webhook**.
+
+La integración empieza **desactivada** y no se puede activar sin un secreto.
+El secreto completo se devuelve exclusivamente como resultado de generarlo y se
+muestra temporalmente en esa vista. No se guarda en el navegador, URL ni HTML
+inicial. Al ocultarlo, recargar o consultar otra vez la página, solo aparece
+**Secreto configurado**. Si no lo copiaste, debes regenerarlo.
+
+**Regenerar secreto** solicita confirmación y reemplaza inmediatamente el secreto
+anterior: las firmas antiguas dejan de ser válidas. Conserva el estado de
+activación. Para una rotación coordinada, desactiva el webhook, regenera, copia el
+nuevo valor a EasyStore y vuelve a activar. No se puede recuperar el secreto
+anterior. Solo OWNER puede ver los controles; las operaciones también comprueban
+el rol y la sesión con TOTP en el servidor.
+
+La generación inicial solo funciona si todavía no existe un secreto. La
+regeneración comprueba de forma atómica la versión que se confirmó: si otra
+pestaña o sesión cambió el secreto, la operación se rechaza y actualiza el estado
+para que vuelvas a revisar y confirmar. Una página antigua nunca reemplaza un
+secreto nuevo sin esa confirmación.
+
+**Desactivar webhook** conserva el secreto cifrado, pero el endpoint responde
+`503` sin leer el evento ni registrar ventas, incluso para reintentos de eventos
+ya importados. También responde `503` si falta configuración o falla el
+descifrado. Al activarlo se mantienen la firma HMAC, la tolerancia de cinco
+minutos y la idempotencia descritas aquí.
+
+`EASYSTORE_WEBHOOK_SECRET` ya no se utiliza y no hay activación automática desde
+el entorno. Tras actualizar una instalación existente, genera el secreto desde
+Ajustes, actualiza EasyStore y activa la integración.
 
 `seller.external_id` debe contener el ID de un vendedor existente de Miel
 Gastos (`Seller.id`), visible en `/sales/catalog`. Si falta o no coincide,
@@ -34,7 +78,7 @@ solo se aceptan eventos cuyo `store.external_id` coincida. Si el pago se hizo
 con tarjeta, se aplica la misma tasa predeterminada del formulario de ventas:
 4.06%. Ambos usan `DEFAULT_CARD_RATE_BPS`. Para otros pagos, la tasa es cero.
 
-En EasyStore configura la URL pública HTTPS del endpoint y el mismo secreto.
+En EasyStore configura la URL pública HTTPS del endpoint y el secreto generado.
 
 ## Mapeo de catálogo
 
@@ -61,4 +105,10 @@ no crea otra venta. Ejecuta las migraciones antes de activar el webhook:
 
 ```bash
 pnpm exec prisma migrate deploy
+```
+
+Pruebas de configuración, permisos, cifrado, rotación y recepción:
+
+```bash
+node --test scripts/easystore*.test.mjs
 ```

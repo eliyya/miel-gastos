@@ -99,7 +99,10 @@ El endpoint `POST /api/webhooks/easystore` recibe ventas `sale.completed` de
 EasyStore, valida su firma HMAC y registra los productos con sus costos y
 comisiones configurados en este catálogo. Consulta
 [`docs/easystore-webhooks.md`](docs/easystore-webhooks.md) para configurar el
-secreto y el mapeo de IDs externos. El campo `seller.external_id` debe coincidir
+secreto y el mapeo de IDs externos. Un OWNER genera el secreto de una sola vista
+y activa o desactiva el webhook desde Mi cuenta (`/settings`). Requiere aplicar
+las migraciones y configurar `EASYSTORE_WEBHOOK_ENCRYPTION_KEY` en el servidor;
+la integración empieza desactivada. El campo `seller.external_id` debe coincidir
 con el ID de un vendedor existente de Miel Gastos. La venta se atribuye al
 usuario vinculado a ese vendedor o, si no tiene uno, al owner más antiguo.
 

@@ -9,12 +9,12 @@ import * as salesModule from "../src/lib/sales.ts";
 const source = readFileSync(new URL("../src/app/api/webhooks/easystore/route.ts", import.meta.url), "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 
-function harness({ sellerExists = true, userId = "linked-user", ownerExists = true } = {}) {
+function harness({ sellerExists = true, userId = "linked-user", ownerExists = true, enabled = true, configurationError = false } = {}) {
   const lookups = [];
   const sales = [];
   const prisma = {
     user: { async findFirst(query) { lookups.push(query.where); return ownerExists ? { id: "owner-user" } : null; } },
-    sale: { async findUnique() { return null; }, async create({ data }) { sales.push(data); return { id: "local-sale" }; } },
+    sale: { async findUnique() { return sales.length ? { id: "local-sale" } : null; }, async create({ data }) { sales.push(data); return { id: "local-sale" }; } },
     product: { async findMany() { return [{ id: "local-product", name: "Miel", costCents: 500 }]; } },
     seller: { async findUnique(query) { lookups.push(query.where); return sellerExists && query.where.id === "local-seller" ? { id: "local-seller", name: "Eli", userId, commissions: [{ productId: "local-product", rateBps: 0 }] } : null; } },
     async $transaction(callback) { return callback(prisma); },
@@ -24,6 +24,10 @@ function harness({ sellerExists = true, userId = "linked-user", ownerExists = tr
     exports, Buffer, console,
     process: { env: { EASYSTORE_WEBHOOK_SECRET: "test-secret", APP_OWNER_EMAIL: "fallback@example.com", EASYSTORE_WEBHOOK_USER_EMAIL: "fallback@example.com" } },
     require(id) {
+      if (id === "@/lib/easystore-settings") return { async getActiveEasystoreWebhookSecret() {
+        if (configurationError) throw new Error("private configuration");
+        return enabled ? "test-secret" : null;
+      } };
       if (id === "@/lib/prisma") return { prisma };
       if (id === "@/lib/sales") return salesModule;
       if (id === "@/lib/easystore-webhook") return webhook;
@@ -57,6 +61,22 @@ test("rejects missing external seller ID", async () => {
   const h = harness();
   assert.equal((await h.POST(request(null))).status, 422);
   assert.equal(h.lookups.length, 0);
+  assert.equal(h.sales.length, 0);
+});
+
+test("disabled webhook rejects events before looking up or writing sales", async () => {
+  const h = harness({ enabled: false });
+  const response = await h.POST(request("local-seller"));
+  assert.equal(response.status, 503);
+  assert.equal(h.lookups.length, 0);
+  assert.equal(h.sales.length, 0);
+});
+
+test("configuration failures fail closed without exposing internal errors", async () => {
+  const h = harness({ configurationError: true });
+  const response = await h.POST(request("local-seller"));
+  assert.equal(response.status, 503);
+  assert.doesNotMatch(await response.text(), /private configuration/);
   assert.equal(h.sales.length, 0);
 });
 
@@ -101,4 +121,28 @@ test("card sales use the same default rate as the app", async () => {
   assert.equal(h.sales[0].paidByCard, true);
   assert.equal(h.sales[0].cardRateBps, salesModule.DEFAULT_CARD_RATE_BPS);
   assert.equal(h.sales[0].cardRateBps, 406);
+});
+
+test("enabled webhook preserves idempotency for repeated deliveries", async () => {
+  const h = harness();
+  const first = await h.POST(request("local-seller"));
+  assert.equal(first.status, 201);
+  assert.equal((await first.json()).duplicate, false);
+  const retry = await h.POST(request("local-seller"));
+  assert.equal(retry.status, 200);
+  assert.equal((await retry.json()).duplicate, true);
+  assert.equal(h.sales.length, 1);
+});
+
+test("enabled webhook still rejects stale timestamps before sale lookups", async () => {
+  const h = harness();
+  const event = request("local-seller");
+  const rawBody = await event.text();
+  const timestamp = String(Math.floor(Date.now() / 1000) - 301);
+  event.headers.set("x-easystore-timestamp", timestamp);
+  event.headers.set("x-easystore-signature", webhook.createEasystoreSignature({ secret: "test-secret", timestamp, rawBody }));
+  const stale = new Request(event.url, { method: "POST", body: rawBody, headers: event.headers });
+  assert.equal((await h.POST(stale)).status, 401);
+  assert.equal(h.lookups.length, 0);
+  assert.equal(h.sales.length, 0);
 });

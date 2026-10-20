@@ -9,6 +9,8 @@ import {
   updateProfileAction,
 } from "@/app/actions";
 import { AgentTokenForm } from "@/components/agent-token-form";
+import { EasystoreWebhookForm } from "@/components/easystore-webhook-form";
+import { getEasystoreWebhookStatus } from "@/lib/easystore-settings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +47,7 @@ export default async function SettingsPage({
   searchParams: Promise<{ createdAdmin?: string; error?: string; updated?: string }>;
 }) {
   const user = await requireTotpUser();
+  const webhookStatus = user.role === "OWNER" ? await getEasystoreWebhookStatus() : null;
   const { createdAdmin, error, updated } = await searchParams;
   const errorMessage = error ? errorMessages[error] : null;
   const updatedMessage = updated ? updatedMessages[updated] : null;
@@ -220,6 +223,7 @@ export default async function SettingsPage({
 
         {user.role === "OWNER" ? (
           <>
+            {webhookStatus ? <EasystoreWebhookForm {...webhookStatus} /> : null}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
