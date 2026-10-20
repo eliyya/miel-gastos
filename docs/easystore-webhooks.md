@@ -50,6 +50,12 @@ nuevo valor a EasyStore y vuelve a activar. No se puede recuperar el secreto
 anterior. Solo OWNER puede ver los controles; las operaciones también comprueban
 el rol y la sesión con TOTP en el servidor.
 
+La generación inicial solo funciona si todavía no existe un secreto. La
+regeneración comprueba de forma atómica la versión que se confirmó: si otra
+pestaña o sesión cambió el secreto, la operación se rechaza y actualiza el estado
+para que vuelvas a revisar y confirmar. Una página antigua nunca reemplaza un
+secreto nuevo sin esa confirmación.
+
 **Desactivar webhook** conserva el secreto cifrado, pero el endpoint responde
 `503` sin leer el evento ni registrar ventas, incluso para reintentos de eventos
 ya importados. También responde `503` si falta configuración o falla el

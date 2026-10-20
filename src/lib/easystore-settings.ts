@@ -20,10 +20,14 @@ export async function getEasystoreWebhookStatus() {
   const settings = await prisma.easystoreWebhookSettings.findUnique({
     where, select: { enabled: true, secretUpdatedAt: true },
   });
-  return { enabled: settings?.enabled ?? false, secretConfigured: settings?.secretUpdatedAt != null };
+  return {
+    enabled: settings?.enabled ?? false,
+    secretConfigured: settings?.secretUpdatedAt != null,
+    secretVersion: settings?.secretUpdatedAt?.toISOString() ?? null,
+  };
 }
 
-export async function generateEasystoreWebhookSecret() {
+export async function generateEasystoreWebhookSecret(expectedVersion: string | null = null) {
   const key = encryptionKey();
   const secret = randomBytes(32).toString("base64url");
   const iv = randomBytes(12);
@@ -31,11 +35,21 @@ export async function generateEasystoreWebhookSecret() {
   cipher.setAAD(Buffer.from("easystore-webhook:v1"));
   const ciphertext = Buffer.concat([cipher.update(secret, "utf8"), cipher.final()]);
   const secretEncrypted = ["v1", iv.toString("base64"), cipher.getAuthTag().toString("base64"), ciphertext.toString("base64")].join(":");
-  const data = { secretEncrypted, secretUpdatedAt: new Date() };
-  await prisma.easystoreWebhookSettings.upsert({
-    where, create: { ...where, ...data }, update: data, select: { id: true },
+  const expectedUpdatedAt = expectedVersion === null ? null : new Date(expectedVersion);
+  // Advance the version even if two confirmed rotations occur in one millisecond.
+  const secretUpdatedAt = new Date(Math.max(Date.now(), expectedUpdatedAt ? expectedUpdatedAt.getTime() + 1 : 0));
+  if (expectedVersion === null) {
+    await prisma.easystoreWebhookSettings.upsert({
+      where, create: where, update: {}, select: { id: true },
+    });
+  }
+  // Initial generation only fills an empty slot. Rotation replaces exactly the
+  // version the owner confirmed, atomically, so stale tabs cannot overwrite it.
+  const result = await prisma.easystoreWebhookSettings.updateMany({
+    where: { ...where, secretUpdatedAt: expectedUpdatedAt },
+    data: { secretEncrypted, secretUpdatedAt },
   });
-  return secret;
+  return result.count === 1 ? secret : null;
 }
 
 export async function setEasystoreWebhookEnabled(enabled: boolean) {

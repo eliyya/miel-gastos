@@ -32,8 +32,10 @@ function harness({ role = "OWNER", authenticated = true, totpEnabled = true, key
       row = row ? { ...row, ...update } : { enabled: false, secretEncrypted: null, secretUpdatedAt: null, ...create };
       return { id: row.id };
     },
-    async updateMany({ data }) {
-      if (!row?.secretEncrypted) return { count: 0 };
+    async updateMany({ where, data }) {
+      if (!row) return { count: 0 };
+      if (where.secretEncrypted && !row.secretEncrypted) return { count: 0 };
+      if ("secretUpdatedAt" in where && (row.secretUpdatedAt?.getTime() ?? null) !== (where.secretUpdatedAt?.getTime() ?? null)) return { count: 0 };
       row = { ...row, ...data };
       return { count: 1 };
     },
@@ -48,16 +50,17 @@ function harness({ role = "OWNER", authenticated = true, totpEnabled = true, key
     } },
     "next/cache": { revalidatePath() {} },
   }, env);
-  return { settings, queries, env, get row() { return row; }, async action(operation) {
+  return { settings, queries, env, get row() { return row; }, async action(operation, secretVersion) {
     const form = new FormData();
     form.set("operation", operation);
+    if (secretVersion !== undefined) form.set("secretVersion", secretVersion);
     return actions.updateEasystoreWebhookAction(form);
   } };
 }
 
 test("starts disabled and cannot enable without a generated secret", async () => {
   const h = harness();
-  assert.equal(JSON.stringify(await h.settings.getEasystoreWebhookStatus()), '{"enabled":false,"secretConfigured":false}');
+  assert.equal(JSON.stringify(await h.settings.getEasystoreWebhookStatus()), '{"enabled":false,"secretConfigured":false,"secretVersion":null}');
   assert.equal(await h.settings.getActiveEasystoreWebhookSecret(), null);
   assert.match((await h.action("enable")).error, /Genera un secreto/);
   assert.equal(h.row, null);
@@ -71,7 +74,10 @@ test("generation returns a random secret once, stores authenticated ciphertext, 
   assert.match(h.row.secretEncrypted, /^v1:/);
   assert.equal(await h.settings.getActiveEasystoreWebhookSecret(), null);
   const status = await h.settings.getEasystoreWebhookStatus();
-  assert.equal(JSON.stringify(status), '{"enabled":false,"secretConfigured":true}');
+  assert.equal(status.enabled, false);
+  assert.equal(status.secretConfigured, true);
+  assert.equal(status.secretVersion, h.row.secretUpdatedAt.toISOString());
+  assert.deepEqual(Object.keys(status), ["enabled", "secretConfigured", "secretVersion"]);
   assert.deepEqual(Object.keys(h.queries.at(-1).select), ["enabled", "secretUpdatedAt"]);
   assert.equal((await h.action("enable")).secret, undefined);
   assert.equal(await h.settings.getActiveEasystoreWebhookSecret(), result.secret);
@@ -85,7 +91,7 @@ test("rotation preserves activation and immediately invalidates the previous sig
   const h = harness();
   const first = (await h.action("generate")).secret;
   await h.action("enable");
-  const second = (await h.action("generate")).secret;
+  const second = (await h.action("rotate", (await h.settings.getEasystoreWebhookStatus()).secretVersion)).secret;
   assert.notEqual(first, second);
   assert.equal(h.row.enabled, true);
   const secret = await h.settings.getActiveEasystoreWebhookSecret();
@@ -100,7 +106,7 @@ test("rotation preserves activation and immediately invalidates the previous sig
 
 test("ADMIN cannot generate, regenerate, enable or disable the webhook", async () => {
   const h = harness({ role: "ADMIN" });
-  for (const operation of ["generate", "enable", "disable"]) {
+  for (const operation of ["generate", "rotate", "enable", "disable"]) {
     assert.match((await h.action(operation)).error, /Solo el owner/);
     assert.equal(h.row, null);
   }
@@ -109,7 +115,7 @@ test("ADMIN cannot generate, regenerate, enable or disable the webhook", async (
 test("authentication and completed TOTP are required on direct action calls", async () => {
   for (const options of [{ authenticated: false }, { totpEnabled: false }]) {
     const h = harness(options);
-    for (const operation of ["generate", "enable", "disable"]) await assert.rejects(h.action(operation), /redirect:/);
+    for (const operation of ["generate", "rotate", "enable", "disable"]) await assert.rejects(h.action(operation), /redirect:/);
     assert.equal(h.row, null);
   }
 });
@@ -163,9 +169,63 @@ test("endpoint uses the managed state and the current secret after rotation", as
   await h.action("enable");
   // A 422 for missing event headers proves the signature passed verification.
   assert.equal((await POST(request(first))).status, 422);
-  const second = (await h.action("generate")).secret;
+  const second = (await h.action("rotate", (await h.settings.getEasystoreWebhookStatus()).secretVersion)).secret;
   assert.equal((await POST(request(first))).status, 401);
   assert.equal((await POST(request(second))).status, 422);
   await h.action("disable");
   assert.equal((await POST(request(second))).status, 503);
+});
+
+test("stale initial-generation forms cannot replace an existing active secret", async () => {
+  const h = harness();
+  const first = (await h.action("generate")).secret;
+  await h.action("enable");
+  const before = JSON.stringify(h.row);
+  const result = await h.action("generate");
+  assert.match(result.error, /otra pestaña/);
+  assert.equal(result.secret, undefined);
+  assert.equal(JSON.stringify(h.row), before);
+  assert.equal(await h.settings.getActiveEasystoreWebhookSecret(), first);
+});
+
+test("concurrent initial generations produce only one secret and cannot overwrite the winner", async () => {
+  const h = harness();
+  const results = await Promise.all([h.action("generate"), h.action("generate")]);
+  assert.equal(results.filter((result) => result.secret).length, 1);
+  assert.equal(results.filter((result) => result.error).length, 1);
+  await h.action("enable");
+  assert.equal(await h.settings.getActiveEasystoreWebhookSecret(), results.find((result) => result.secret).secret);
+});
+
+test("rotation requires confirmation of a valid current version and rejects stale confirmations", async () => {
+  const h = harness();
+  await h.action("generate");
+  await h.action("enable");
+  const version = (await h.settings.getEasystoreWebhookStatus()).secretVersion;
+  const before = JSON.stringify(h.row);
+  for (const invalid of [undefined, "", "not-a-date"]) {
+    const result = await h.action("rotate", invalid);
+    assert.match(result.error, /confirma/);
+    assert.equal(result.secret, undefined);
+    assert.equal(JSON.stringify(h.row), before);
+  }
+  const results = await Promise.all([h.action("rotate", version), h.action("rotate", version)]);
+  assert.equal(results.filter((result) => result.secret).length, 1);
+  assert.equal(results.filter((result) => result.error).length, 1);
+  const winner = results.find((result) => result.secret).secret;
+  assert.equal(await h.settings.getActiveEasystoreWebhookSecret(), winner);
+  assert.notEqual((await h.settings.getEasystoreWebhookStatus()).secretVersion, version);
+  assert.equal((await h.action("rotate", version)).secret, undefined);
+  assert.equal(await h.settings.getActiveEasystoreWebhookSecret(), winner);
+});
+
+test("rotations within the same millisecond still advance the version", async () => {
+  const h = harness();
+  await h.action("generate");
+  // Future version simulates a server clock that has not advanced yet.
+  h.row.secretUpdatedAt = new Date(Date.now() + 60_000);
+  const version = h.row.secretUpdatedAt.toISOString();
+  assert.ok((await h.action("rotate", version)).secret);
+  assert.ok(h.row.secretUpdatedAt.getTime() > Date.parse(version));
+  assert.equal((await h.action("rotate", version)).secret, undefined);
 });

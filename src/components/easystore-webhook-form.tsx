@@ -6,19 +6,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export function EasystoreWebhookForm({ enabled, secretConfigured }: { enabled: boolean; secretConfigured: boolean }) {
+export function EasystoreWebhookForm({ enabled, secretConfigured, secretVersion }: { enabled: boolean; secretConfigured: boolean; secretVersion: string | null }) {
   const [secret, setSecret] = useState<string>();
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
   const [pending, setPending] = useState(false);
-  const [confirmRotation, setConfirmRotation] = useState(false);
+  const [confirmRotation, setConfirmRotation] = useState<string | null>(null);
 
   async function submit(formData: FormData) {
     setSecret(undefined);
     setMessage(undefined);
     setError(undefined);
     setPending(true);
-    setConfirmRotation(false);
+    setConfirmRotation(null);
     try {
       const result = await updateEasystoreWebhookAction(formData);
       setSecret(result.secret);
@@ -48,16 +48,17 @@ export function EasystoreWebhookForm({ enabled, secretConfigured }: { enabled: b
           </Button>
         </form>
         <form action={submit} className="grid gap-3">
-          <input type="hidden" name="operation" value="generate" />
+          <input type="hidden" name="operation" value={confirmRotation ? "rotate" : "generate"} />
+          <input type="hidden" name="secretVersion" value={confirmRotation ?? ""} />
           <p className="text-sm text-muted-foreground">El secreto nuevo se muestra una sola vez. Cópialo y configúralo en EasyStore antes de cerrar o recargar esta página.</p>
           {secretConfigured && !confirmRotation ? (
-            <Button type="button" variant="outline" className="w-fit" disabled={pending} onClick={() => { setSecret(undefined); setConfirmRotation(true); }}>Regenerar secreto</Button>
+            <Button type="button" variant="outline" className="w-fit" disabled={pending} onClick={() => { setSecret(undefined); setConfirmRotation(secretVersion); }}>Regenerar secreto</Button>
           ) : (
             <>
               {confirmRotation ? <p className="text-sm">El secreto anterior dejará de funcionar inmediatamente. Deberás actualizarlo en EasyStore.</p> : null}
               <div className="flex flex-wrap gap-2">
                 <Button type="submit" disabled={pending}>{confirmRotation ? "Confirmar regeneración" : "Generar secreto"}</Button>
-                {confirmRotation ? <Button type="button" variant="outline" onClick={() => setConfirmRotation(false)}>Cancelar</Button> : null}
+                {confirmRotation ? <Button type="button" variant="outline" onClick={() => setConfirmRotation(null)}>Cancelar</Button> : null}
               </div>
             </>
           )}
