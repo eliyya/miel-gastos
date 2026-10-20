@@ -17,6 +17,14 @@ enum UserRole {
   ADMIN
 }
 
+model EasystoreWebhookSettings {
+  id              String    @id @default("easystore")
+  enabled         Boolean   @default(false)
+  secretEncrypted String?
+  secretUpdatedAt DateTime?
+  updatedAt       DateTime  @updatedAt
+}
+
 model User {
   id           String       @id @default(cuid())
   email        String       @unique

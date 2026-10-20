@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { getActiveEasystoreWebhookSecret } from "@/lib/easystore-settings";
 import { DEFAULT_CARD_RATE_BPS } from "@/lib/sales";
 import {
   EASYSTORE_EVENT_TYPE,
@@ -35,8 +36,13 @@ type ImportedLineItem = {
 };
 
 export async function POST(request: Request) {
-  const secret = process.env.EASYSTORE_WEBHOOK_SECRET?.trim();
-  if (!secret) return errorResponse("El webhook de EasyStore no está configurado.", 503);
+  let secret: string | null;
+  try {
+    secret = await getActiveEasystoreWebhookSecret();
+  } catch {
+    return errorResponse("La configuración del webhook de EasyStore no está disponible.", 503);
+  }
+  if (!secret) return errorResponse("El webhook de EasyStore está desactivado o no está configurado.", 503);
 
   let rawBody: string;
   try {
