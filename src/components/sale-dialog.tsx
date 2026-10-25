@@ -254,17 +254,10 @@ export function SaleDialog({
                                         {rows.map((row, i) => (
                                             <div
                                                 key={row.key}
-                                                className="overflow-x-auto rounded-xl border bg-background/40 p-4"
+                                                className="min-w-0 rounded-xl border bg-background/40 p-4"
                                             >
-                                                <div
-                                                    className="grid items-end gap-3"
-                                                    style={{
-                                                        minWidth: 640,
-                                                        gridTemplateColumns:
-                                                            'minmax(180px, 1fr) 90px 160px 90px 40px',
-                                                    }}
-                                                >
-                                                    <div className="grid min-w-0 gap-2 text-sm">
+                                                <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-[minmax(0,1fr)_90px_160px_90px_40px]">
+                                                    <div className="col-span-2 grid min-w-0 gap-2 text-sm sm:col-span-1">
                                                         <label htmlFor={`${id}-product-${row.key}`}>
                                                             Producto {i + 1} *
                                                         </label>
@@ -316,7 +309,7 @@ export function SaleDialog({
                                                             </SelectContent>
                                                         </Select>
                                                     </div>
-                                                    <label className="grid gap-2 text-sm">
+                                                    <label className="grid min-w-0 gap-2 text-sm">
                                                         Cantidad *
                                                         <InputGroup>
                                                             <InputGroupInput
