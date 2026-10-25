@@ -2,6 +2,7 @@ import { last30Days } from "@/lib/chart-range";
 import { Suspense, cache } from "react";
 import { ExpenseDialog } from "@/components/expense-dialog";
 import { mexicoDate } from "@/lib/statistics";
+import { getRequestToday } from "@/lib/request-date";
 import { EmptyState } from "@/components/empty-state";
 import { AppShell } from "@/components/app-shell";
 import { ExpenseMonthCharts } from "@/components/expense-month-charts";
@@ -56,12 +57,13 @@ export default function ExpensesPage() {
 
 async function ExpenseRegistration() {
   await getUser();
-  return <ExpenseDialog today={mexicoDate(new Date())} primary />;
+  const today = await getRequestToday();
+  return <ExpenseDialog today={today} primary />;
 }
 
 async function MonthlyExpenses() {
   await getUser();
-  const today = mexicoDate(new Date());
+  const today = await getRequestToday();
   const { days, start, endExclusive } = last30Days(today);
   const rangeStart = new Date(`${start}T00:00:00-06:00`);
   const rangeEnd = new Date(`${endExclusive}T00:00:00-06:00`);

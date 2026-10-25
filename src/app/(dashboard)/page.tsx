@@ -29,9 +29,9 @@ import {
 import { requireTotpUser } from "@/lib/auth";
 import { formatMoney } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
+import { getRequestToday } from "@/lib/request-date";
 import {
   buildStatistics,
-  mexicoDate,
   parseStatisticsRange,
   periodLabel,
   type Granularity,
@@ -53,7 +53,7 @@ export default async function StatisticsPage({ searchParams }: { searchParams: P
       orderBy: { name: "asc" },
     }),
   ]);
-  const today = mexicoDate(new Date());
+  const today = await getRequestToday();
   const actions = (
     <div className="flex flex-wrap items-center gap-3">
       <ExpenseDialog today={today} />
