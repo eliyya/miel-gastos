@@ -132,6 +132,27 @@ El login solicita primero correo y contraseña. Si el usuario tiene TOTP activo,
 
 - $60.00 MXN por 20 botellas para miel a $3.00 cada una.
 
+## Respaldo JSON
+
+En **Mi cuenta → Respaldo de la base de datos**, un OWNER con TOTP activo puede
+descargar todos los registros de las diez tablas de la aplicación. La descarga
+incluye usuarios, sesiones, tokens, gastos, productos, vendedores, comisiones,
+ventas, partidas y configuración de EasyStore, sin filtros por usuario o fecha.
+
+`GET /api/backup` valida la sesión y el rol en el servidor y responde como archivo
+adjunto sin caché. Prisma 8 ejecuta una sola consulta de lectura para obtener una
+instantánea consistente. El JSON contiene `format`, `version`, `exportedAt`,
+`counts`, `schema` (contrato de datos) y `data` (registros por tabla). Conserva los
+IDs y las claves foráneas; las tablas vacías se representan como arreglos vacíos.
+
+El archivo contiene información sensible, incluidos hashes de contraseñas y
+secretos TOTP. Conserva el respaldo de forma privada. No incluye variables de
+entorno, archivos ni tablas internas de migraciones de Prisma. Guarda por separado
+`EASYSTORE_WEBHOOK_ENCRYPTION_KEY`: es necesaria para recuperar el secreto cifrado
+del webhook. La importación/restauración del JSON todavía no tiene interfaz;
+requiere reconstruir el esquema con las migraciones e importar respetando las
+relaciones.
+
 ## Comandos utiles
 
 ```bash

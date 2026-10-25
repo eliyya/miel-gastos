@@ -9,6 +9,7 @@ import {
 } from '@/app/actions'
 import { AgentTokenForm } from '@/components/agent-token-form'
 import { AppShell } from '@/components/app-shell'
+import { DatabaseBackupCard } from '@/components/database-backup-card'
 import { EasystoreWebhookForm } from '@/components/easystore-webhook-form'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -221,6 +222,7 @@ export default async function SettingsPage({
 
             {user.role === 'OWNER' ? (
                 <>
+                    <DatabaseBackupCard />
                     {webhookStatus ? <EasystoreWebhookForm {...webhookStatus} /> : null}
                     <Card>
                         <CardHeader>
