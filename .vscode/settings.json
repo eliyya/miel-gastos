@@ -12,5 +12,8 @@
   "oxc.disableNestedConfig": true,
   "oxc.fmt.disableNestedConfig": true,
   "WillLuke.nextjs.addTypesOnSave": true,
-  "WillLuke.nextjs.hasPrompted": true
+  "WillLuke.nextjs.hasPrompted": true,
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  }
 }
