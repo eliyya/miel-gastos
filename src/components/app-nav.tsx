@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, ChartNoAxesCombined, ReceiptText, Settings2, ShoppingBag } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 
 const links = [
   { href: "/", label: "Estadísticas", icon: ChartNoAxesCombined },

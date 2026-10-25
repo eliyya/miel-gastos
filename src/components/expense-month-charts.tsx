@@ -4,7 +4,7 @@ import { useId, useState } from "react";
 import { ReceiptText, Wallet, ShoppingBag, Package } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatMoney } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 
 type Day = { date: string; amount: number; count: number };
 
