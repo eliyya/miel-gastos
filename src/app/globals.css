@@ -132,6 +132,13 @@
   }
 }
 @layer base {
-  ::selection { background: #fdc64a; color: #44240b; }
-  button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary { cursor: pointer; }
+  ::selection {
+    background: #fdc64a;
+    color: #44240b;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
 }

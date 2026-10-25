@@ -12,11 +12,7 @@ import {
   requireUser,
   verifyPassword,
 } from "@/lib/auth";
-import {
-  createAgentTokenValue,
-  getAgentTokenPrefix,
-  hashAgentToken,
-} from "@/lib/agent-tokens";
+import { createAgentTokenValue, getAgentTokenPrefix, hashAgentToken } from "@/lib/agent-tokens";
 import { parseMoneyToCents } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { createTotpSecret, verifyTotpToken } from "@/lib/totp";
@@ -39,7 +35,10 @@ async function requireOwner() {
   return user;
 }
 
-export async function loginAction(_previousState: LoginState, formData: FormData): Promise<LoginState> {
+export async function loginAction(
+  _previousState: LoginState,
+  formData: FormData,
+): Promise<LoginState> {
   const email = emailSchema.safeParse(formString(formData, "email"));
   // Passwords are opaque: whitespace can be part of the user's password.
   const password = String(formData.get("password") ?? "");
@@ -55,23 +54,38 @@ export async function loginAction(_previousState: LoginState, formData: FormData
   try {
     const user = await prisma.user.findUnique({ where: { email: email.data } });
     if (!user || !(await verifyPassword(password, user.passwordHash))) {
-      return { error: "El correo o la contraseña no coinciden. Revisa tus datos e inténtalo de nuevo." };
+      return {
+        error: "El correo o la contraseña no coinciden. Revisa tus datos e inténtalo de nuevo.",
+      };
     }
     if (user.totpEnabled) {
       if (!totpCode) {
         return { step: "totp" };
       }
       if (!/^\d{6}$/.test(totpCode)) {
-        return { step: "totp", error: "Revisa el código de autenticación.", fields: { totpCode: "El código debe tener 6 dígitos." } };
+        return {
+          step: "totp",
+          error: "Revisa el código de autenticación.",
+          fields: { totpCode: "El código debe tener 6 dígitos." },
+        };
       }
       if (!user.totpSecret || !verifyTotpToken(totpCode, user.totpSecret)) {
-        return { step: "totp", error: "No pudimos verificar tu código.", fields: { totpCode: "El código es incorrecto o ya venció. Usa el código actual de tu app." } };
+        return {
+          step: "totp",
+          error: "No pudimos verificar tu código.",
+          fields: {
+            totpCode: "El código es incorrecto o ya venció. Usa el código actual de tu app.",
+          },
+        };
       }
     }
     await createSession(user.id);
     destination = user.totpEnabled ? "/" : "/totp/setup";
   } catch {
-    return { error: "No pudimos conectar con el servicio de acceso. Espera un momento e inténtalo de nuevo." };
+    return {
+      error:
+        "No pudimos conectar con el servicio de acceso. Espera un momento e inténtalo de nuevo.",
+    };
   }
   redirect(destination);
 }
@@ -230,7 +244,9 @@ export async function regenerateTotpAction() {
   redirect("/totp/setup");
 }
 
-export async function saveExpenseAction(formData: FormData): Promise<{ error?: string; success?: string }> {
+export async function saveExpenseAction(
+  formData: FormData,
+): Promise<{ error?: string; success?: string }> {
   const user = await requireTotpUser();
   const amountCents = parseMoneyToCents(formData.get("amount"));
   const description = formString(formData, "description");

@@ -2,7 +2,7 @@
 import { defineConfig } from "prisma/config";
 
 try {
-process.loadEnvFile()
+  process.loadEnvFile();
 } catch {}
 
 export default defineConfig({

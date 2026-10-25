@@ -19,8 +19,14 @@ test("verifies EasyStore signatures and rejects stale timestamps", () => {
   const signature = createEasystoreSignature({ secret, timestamp, rawBody });
 
   assert.equal(verifyEasystoreSignature({ secret, timestamp, signature, rawBody, now }), true);
-  assert.equal(verifyEasystoreSignature({ secret, timestamp, signature: `${signature}x`, rawBody, now }), false);
-  assert.equal(verifyEasystoreSignature({ secret, timestamp, signature, rawBody, now: now + 301_000 }), false);
+  assert.equal(
+    verifyEasystoreSignature({ secret, timestamp, signature: `${signature}x`, rawBody, now }),
+    false,
+  );
+  assert.equal(
+    verifyEasystoreSignature({ secret, timestamp, signature, rawBody, now: now + 301_000 }),
+    false,
+  );
 });
 
 test("parses money without accepting fractions beyond cents", () => {
@@ -53,14 +59,16 @@ test("accepts the sale.completed contract emitted by EasyStore", () => {
       created_at: "2026-09-30T12:00:00.000Z",
     },
     seller: { id: "seller-1", external_id: null, name: "Lizeth" },
-    items: [{
-      product_id: "product-1",
-      external_product_id: "miel-product-1",
-      name: "Miel",
-      quantity: 1,
-      unit_price: 25,
-      stock_after_sale: 4,
-    }],
+    items: [
+      {
+        product_id: "product-1",
+        external_product_id: "miel-product-1",
+        name: "Miel",
+        quantity: 1,
+        unit_price: 25,
+        stock_after_sale: 4,
+      },
+    ],
   });
 
   assert.equal(result.success, true);

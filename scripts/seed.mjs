@@ -1,5 +1,5 @@
 try {
-process.loadEnvFile()
+  process.loadEnvFile();
 } catch {}
 
 import { hash } from "bcryptjs";
@@ -59,10 +59,10 @@ try {
   }
 
   if (existingUser.rows[0] && !existingUser.rows[0].totpSecret) {
-    await client.query(
-      'update "User" set "totpSecret" = $1, "updatedAt" = now() where id = $2',
-      [generateSecret(), userId],
-    );
+    await client.query('update "User" set "totpSecret" = $1, "updatedAt" = now() where id = $2', [
+      generateSecret(),
+      userId,
+    ]);
   }
 
   const existingExpense = await client.query(
@@ -73,13 +73,7 @@ try {
        and description = $4
        and "spentAt" = $5::timestamp
      limit 1`,
-    [
-      userId,
-      expense.amountCents,
-      expense.category,
-      expense.description,
-      expense.spentAt,
-    ],
+    [userId, expense.amountCents, expense.category, expense.description, expense.spentAt],
   );
 
   let expenseId = existingExpense.rows[0]?.id;

@@ -4,13 +4,20 @@ import { revalidatePath } from "next/cache";
 
 import { requireTotpUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { calculateSale, parseHundredths, parseSaleInput, saleSnapshot, type SalesFormState } from "@/lib/sales";
+import {
+  calculateSale,
+  parseHundredths,
+  parseSaleInput,
+  saleSnapshot,
+  type SalesFormState,
+} from "@/lib/sales";
 
 const text = (form: FormData, key: string) => String(form.get(key) ?? "").trim();
 
 export async function deleteSaleAction(id: string): Promise<SalesFormState> {
   await requireTotpUser();
-  if (typeof id !== "string" || !id.trim() || id.length > 128) return { error: "La venta no es válida." };
+  if (typeof id !== "string" || !id.trim() || id.length > 128)
+    return { error: "La venta no es válida." };
   // SaleItem is removed by the database's ON DELETE CASCADE; retries are harmless.
   await prisma.sale.deleteMany({ where: { id } });
   revalidatePath("/sales");
@@ -21,26 +28,56 @@ export async function deleteSaleAction(id: string): Promise<SalesFormState> {
 export async function createSaleAction(form: FormData): Promise<SalesFormState> {
   const user = await requireTotpUser();
   const input = parseSaleInput(form);
-  if (!input) return { error: "Revisa fecha, vendedor, tasa, cantidades y precios. Usa precios no negativos con hasta dos decimales y no repitas productos." };
+  if (!input)
+    return {
+      error:
+        "Revisa fecha, vendedor, tasa, cantidades y precios. Usa precios no negativos con hasta dos decimales y no repitas productos.",
+    };
 
-  const result = await prisma.$transaction(async (tx) => {
-    const seller = await tx.seller.findUnique({ where: { id: input.sellerId }, include: { commissions: true } });
-    const products = await tx.product.findMany({ where: { id: { in: input.items.map((item) => item.productId) }, active: true } });
-    if (!seller?.active) return { error: "El vendedor ya no está disponible. Actualiza el catálogo y revisa la venta." };
-    const snapshot = saleSnapshot(products, seller, input.items);
-    if (!snapshot) return { error: "Revisa que los productos estén activos y que el vendedor tenga una comisión configurada para cada uno (0% si no cobra)." };
-    if (text(form, "snapshot") !== JSON.stringify(snapshot)) {
-      return { error: "Cambió un precio, costo o comisión. Actualiza el catálogo y revisa los importes antes de guardar." };
-    }
-    const totals = calculateSale(snapshot.items, input.cardRateBps);
-    if (totals.subtotal > 2_000_000_000 || totals.cost > 2_000_000_000) return { error: "El importe de la venta supera el límite permitido." };
-    await tx.sale.create({ data: {
-      userId: user.id, soldAt: new Date(`${input.soldAt}T00:00:00.000Z`), customer: input.customer,
-      sellerId: seller.id, sellerName: snapshot.sellerName, paidByCard: input.paidByCard,
-      cardRateBps: input.cardRateBps, items: { create: snapshot.items },
-    } });
-    return { success: "Venta registrada correctamente." };
-  }, { isolationLevel: "RepeatableRead" });
+  const result = await prisma.$transaction(
+    async (tx) => {
+      const seller = await tx.seller.findUnique({
+        where: { id: input.sellerId },
+        include: { commissions: true },
+      });
+      const products = await tx.product.findMany({
+        where: { id: { in: input.items.map((item) => item.productId) }, active: true },
+      });
+      if (!seller?.active)
+        return {
+          error: "El vendedor ya no está disponible. Actualiza el catálogo y revisa la venta.",
+        };
+      const snapshot = saleSnapshot(products, seller, input.items);
+      if (!snapshot)
+        return {
+          error:
+            "Revisa que los productos estén activos y que el vendedor tenga una comisión configurada para cada uno (0% si no cobra).",
+        };
+      if (text(form, "snapshot") !== JSON.stringify(snapshot)) {
+        return {
+          error:
+            "Cambió un precio, costo o comisión. Actualiza el catálogo y revisa los importes antes de guardar.",
+        };
+      }
+      const totals = calculateSale(snapshot.items, input.cardRateBps);
+      if (totals.subtotal > 2_000_000_000 || totals.cost > 2_000_000_000)
+        return { error: "El importe de la venta supera el límite permitido." };
+      await tx.sale.create({
+        data: {
+          userId: user.id,
+          soldAt: new Date(`${input.soldAt}T00:00:00.000Z`),
+          customer: input.customer,
+          sellerId: seller.id,
+          sellerName: snapshot.sellerName,
+          paidByCard: input.paidByCard,
+          cardRateBps: input.cardRateBps,
+          items: { create: snapshot.items },
+        },
+      });
+      return { success: "Venta registrada correctamente." };
+    },
+    { isolationLevel: "RepeatableRead" },
+  );
   if (result.success) {
     revalidatePath("/sales");
     revalidatePath("/");
@@ -48,14 +85,19 @@ export async function createSaleAction(form: FormData): Promise<SalesFormState> 
   return result;
 }
 
-export async function saveProductAction(_: SalesFormState, form: FormData): Promise<SalesFormState> {
+export async function saveProductAction(
+  _: SalesFormState,
+  form: FormData,
+): Promise<SalesFormState> {
   await requireTotpUser();
   const id = text(form, "id");
   const name = text(form, "name");
   const priceCents = parseHundredths(form.get("price"));
   const costCents = parseHundredths(form.get("cost"));
   if (!name || name.length > 120 || priceCents === null || priceCents <= 0 || costCents === null) {
-    return { error: "Revisa el nombre, el precio (mayor a cero) y el costo. Usa hasta dos decimales." };
+    return {
+      error: "Revisa el nombre, el precio (mayor a cero) y el costo. Usa hasta dos decimales.",
+    };
   }
   const data = { name, priceCents, costCents, active: form.get("active") === "on" };
   if (id) {
@@ -79,8 +121,12 @@ export async function saveSellerAction(_: SalesFormState, form: FormData): Promi
   if (userId) {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
     if (!user) return { error: "El usuario seleccionado ya no existe." };
-    const linkedSeller = await prisma.seller.findUnique({ where: { userId }, select: { id: true } });
-    if (linkedSeller && linkedSeller.id !== id) return { error: "Ese usuario ya está asociado a otro vendedor." };
+    const linkedSeller = await prisma.seller.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    if (linkedSeller && linkedSeller.id !== id)
+      return { error: "Ese usuario ya está asociado a otro vendedor." };
   }
   const products = await prisma.product.findMany({ select: { id: true } });
   const commissions: { productId: string; rateBps: number }[] = [];
@@ -89,24 +135,34 @@ export async function saveSellerAction(_: SalesFormState, form: FormData): Promi
     // An empty rate means unconfigured, never an implicit zero commission.
     if (!value) continue;
     const rateBps = parseHundredths(value, 10_000);
-    if (rateBps === null) return { error: "Las comisiones deben estar entre 0 y 100%, con hasta dos decimales." };
+    if (rateBps === null)
+      return { error: "Las comisiones deben estar entre 0 y 100%, con hasta dos decimales." };
     commissions.push({ productId: product.id, rateBps });
   }
   try {
     await prisma.$transaction(async (tx) => {
       const seller = id
-        ? await tx.seller.update({ where: { id }, data: { name, userId, active: form.get("active") === "on" } })
+        ? await tx.seller.update({
+            where: { id },
+            data: { name, userId, active: form.get("active") === "on" },
+          })
         : await tx.seller.create({ data: { name, userId, active: form.get("active") === "on" } });
       // Only replace fields actually present in this form; preserve concurrently added products.
       const submittedIds = products.filter((p) => form.has(`commission:${p.id}`)).map((p) => p.id);
-      await tx.sellerCommission.deleteMany({ where: { sellerId: seller.id, productId: { in: submittedIds } } });
-      await tx.sellerCommission.createMany({ data: commissions.map((c) => ({ ...c, sellerId: seller.id })) });
+      await tx.sellerCommission.deleteMany({
+        where: { sellerId: seller.id, productId: { in: submittedIds } },
+      });
+      await tx.sellerCommission.createMany({
+        data: commissions.map((c) => ({ ...c, sellerId: seller.id })),
+      });
     });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error) {
       if (error.code === "P2002") return { error: "Ese usuario ya está asociado a otro vendedor." };
-      if (error.code === "P2003") return { error: "El usuario seleccionado ya no existe. Actualiza el catálogo." };
-      if (error.code === "P2025") return { error: "El vendedor ya no existe. Actualiza el catálogo." };
+      if (error.code === "P2003")
+        return { error: "El usuario seleccionado ya no existe. Actualiza el catálogo." };
+      if (error.code === "P2025")
+        return { error: "El vendedor ya no existe. Actualiza el catálogo." };
     }
     throw error;
   }

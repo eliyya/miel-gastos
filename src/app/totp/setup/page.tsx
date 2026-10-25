@@ -3,13 +3,7 @@ import { KeyRound, RotateCcw } from "lucide-react";
 
 import { enableTotpAction, regenerateTotpAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { requireUser } from "@/lib/auth";
@@ -45,8 +39,16 @@ export default async function TotpSetupPage({
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <Image src="/brand/mmdc-logo.svg" alt="Martín del Campo" width={64} height={64} className="mb-4" />
-          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-honey">Un último paso</p>
+          <Image
+            src="/brand/mmdc-logo.svg"
+            alt="Martín del Campo"
+            width={64}
+            height={64}
+            className="mb-4"
+          />
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-honey">
+            Un último paso
+          </p>
           <CardTitle className="flex items-center gap-2 font-serif text-2xl">
             <KeyRound className="size-5" />
             Protege tu cuenta
@@ -88,7 +90,9 @@ export default async function TotpSetupPage({
                 required
               />
             </div>
-            <Button type="submit" size="lg">Activar y entrar</Button>
+            <Button type="submit" size="lg">
+              Activar y entrar
+            </Button>
           </form>
 
           <form action={regenerateTotpAction}>

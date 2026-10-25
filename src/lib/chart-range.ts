@@ -5,5 +5,9 @@ export function last30Days(today: string) {
     amount: 0,
     count: 0,
   }));
-  return { days, start: days[0].date, endExclusive: new Date(end + 86_400_000).toISOString().slice(0, 10) };
+  return {
+    days,
+    start: days[0].date,
+    endExclusive: new Date(end + 86_400_000).toISOString().slice(0, 10),
+  };
 }

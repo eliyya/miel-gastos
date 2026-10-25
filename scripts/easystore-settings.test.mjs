@@ -4,63 +4,108 @@ import { createRequire } from "node:module";
 import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
-import { createEasystoreSignature, verifyEasystoreSignature } from "../src/lib/easystore-webhook.ts";
+import {
+  createEasystoreSignature,
+  verifyEasystoreSignature,
+} from "../src/lib/easystore-webhook.ts";
 
 const require = createRequire(import.meta.url);
 function load(file, dependencies, env) {
   const source = readFileSync(new URL(file, import.meta.url), "utf8");
-  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
   const exports = {};
-  vm.runInNewContext(compiled, { exports, Buffer, Date, process: { env }, require(id) {
-    if (id in dependencies) return dependencies[id];
-    if (id === "node:crypto") return require(id);
-    throw new Error(`Unexpected dependency: ${id}`);
-  } });
+  vm.runInNewContext(compiled, {
+    exports,
+    Buffer,
+    Date,
+    process: { env },
+    require(id) {
+      if (id in dependencies) return dependencies[id];
+      if (id === "node:crypto") return require(id);
+      throw new Error(`Unexpected dependency: ${id}`);
+    },
+  });
   return exports;
 }
 
-function harness({ role = "OWNER", authenticated = true, totpEnabled = true, key = Buffer.alloc(32, 7).toString("base64") } = {}) {
+function harness({
+  role = "OWNER",
+  authenticated = true,
+  totpEnabled = true,
+  key = Buffer.alloc(32, 7).toString("base64"),
+} = {}) {
   let row = null;
   const queries = [];
   const env = { EASYSTORE_WEBHOOK_ENCRYPTION_KEY: key };
   const model = {
     async findUnique(query) {
       queries.push(query);
-      return row ? Object.fromEntries(Object.keys(query.select).map((key) => [key, row[key]])) : null;
+      return row
+        ? Object.fromEntries(Object.keys(query.select).map((key) => [key, row[key]]))
+        : null;
     },
     async upsert({ create, update }) {
-      row = row ? { ...row, ...update } : { enabled: false, secretEncrypted: null, secretUpdatedAt: null, ...create };
+      row = row
+        ? { ...row, ...update }
+        : { enabled: false, secretEncrypted: null, secretUpdatedAt: null, ...create };
       return { id: row.id };
     },
     async updateMany({ where, data }) {
       if (!row) return { count: 0 };
       if (where.secretEncrypted && !row.secretEncrypted) return { count: 0 };
-      if ("secretUpdatedAt" in where && (row.secretUpdatedAt?.getTime() ?? null) !== (where.secretUpdatedAt?.getTime() ?? null)) return { count: 0 };
+      if (
+        "secretUpdatedAt" in where &&
+        (row.secretUpdatedAt?.getTime() ?? null) !== (where.secretUpdatedAt?.getTime() ?? null)
+      )
+        return { count: 0 };
       row = { ...row, ...data };
       return { count: 1 };
     },
   };
-  const settings = load("../src/lib/easystore-settings.ts", { "server-only": {}, "@/lib/prisma": { prisma: { easystoreWebhookSettings: model } } }, env);
-  const actions = load("../src/app/easystore-actions.ts", {
-    "@/lib/easystore-settings": settings,
-    "@/lib/auth": { async requireTotpUser() {
-      if (!authenticated) throw new Error("redirect:/login");
-      if (!totpEnabled) throw new Error("redirect:/totp/setup");
-      return { role };
-    } },
-    "next/cache": { revalidatePath() {} },
-  }, env);
-  return { settings, queries, env, get row() { return row; }, async action(operation, secretVersion) {
-    const form = new FormData();
-    form.set("operation", operation);
-    if (secretVersion !== undefined) form.set("secretVersion", secretVersion);
-    return actions.updateEasystoreWebhookAction(form);
-  } };
+  const settings = load(
+    "../src/lib/easystore-settings.ts",
+    { "server-only": {}, "@/lib/prisma": { prisma: { easystoreWebhookSettings: model } } },
+    env,
+  );
+  const actions = load(
+    "../src/app/easystore-actions.ts",
+    {
+      "@/lib/easystore-settings": settings,
+      "@/lib/auth": {
+        async requireTotpUser() {
+          if (!authenticated) throw new Error("redirect:/login");
+          if (!totpEnabled) throw new Error("redirect:/totp/setup");
+          return { role };
+        },
+      },
+      "next/cache": { revalidatePath() {} },
+    },
+    env,
+  );
+  return {
+    settings,
+    queries,
+    env,
+    get row() {
+      return row;
+    },
+    async action(operation, secretVersion) {
+      const form = new FormData();
+      form.set("operation", operation);
+      if (secretVersion !== undefined) form.set("secretVersion", secretVersion);
+      return actions.updateEasystoreWebhookAction(form);
+    },
+  };
 }
 
 test("starts disabled and cannot enable without a generated secret", async () => {
   const h = harness();
-  assert.equal(JSON.stringify(await h.settings.getEasystoreWebhookStatus()), '{"enabled":false,"secretConfigured":false,"secretVersion":null}');
+  assert.equal(
+    JSON.stringify(await h.settings.getEasystoreWebhookStatus()),
+    '{"enabled":false,"secretConfigured":false,"secretVersion":null}',
+  );
   assert.equal(await h.settings.getActiveEasystoreWebhookSecret(), null);
   assert.match((await h.action("enable")).error, /Genera un secreto/);
   assert.equal(h.row, null);
@@ -91,17 +136,28 @@ test("rotation preserves activation and immediately invalidates the previous sig
   const h = harness();
   const first = (await h.action("generate")).secret;
   await h.action("enable");
-  const second = (await h.action("rotate", (await h.settings.getEasystoreWebhookStatus()).secretVersion)).secret;
+  const second = (
+    await h.action("rotate", (await h.settings.getEasystoreWebhookStatus()).secretVersion)
+  ).secret;
   assert.notEqual(first, second);
   assert.equal(h.row.enabled, true);
   const secret = await h.settings.getActiveEasystoreWebhookSecret();
   assert.equal(secret, second);
   const timestamp = String(Math.floor(Date.now() / 1000));
   const rawBody = '{"id":"rotation-event"}';
-  const verify = (signingSecret) => verifyEasystoreSignature({ secret, timestamp, rawBody, signature: createEasystoreSignature({ secret: signingSecret, timestamp, rawBody }) });
+  const verify = (signingSecret) =>
+    verifyEasystoreSignature({
+      secret,
+      timestamp,
+      rawBody,
+      signature: createEasystoreSignature({ secret: signingSecret, timestamp, rawBody }),
+    });
   assert.equal(verify(first), false);
   assert.equal(verify(second), true);
-  assert.doesNotMatch(JSON.stringify(await h.settings.getEasystoreWebhookStatus()), new RegExp(second));
+  assert.doesNotMatch(
+    JSON.stringify(await h.settings.getEasystoreWebhookStatus()),
+    new RegExp(second),
+  );
 });
 
 test("ADMIN cannot generate, regenerate, enable or disable the webhook", async () => {
@@ -115,7 +171,8 @@ test("ADMIN cannot generate, regenerate, enable or disable the webhook", async (
 test("authentication and completed TOTP are required on direct action calls", async () => {
   for (const options of [{ authenticated: false }, { totpEnabled: false }]) {
     const h = harness(options);
-    for (const operation of ["generate", "rotate", "enable", "disable"]) await assert.rejects(h.action(operation), /redirect:/);
+    for (const operation of ["generate", "rotate", "enable", "disable"])
+      await assert.rejects(h.action(operation), /redirect:/);
     assert.equal(h.row, null);
   }
 });
@@ -148,28 +205,42 @@ test("authenticated encryption rejects tampering or a changed server key", async
 
 test("endpoint uses the managed state and the current secret after rotation", async () => {
   const h = harness();
-  const { POST } = load("../src/app/api/webhooks/easystore/route.ts", {
-    "@/lib/easystore-settings": h.settings,
-    "@/lib/prisma": { prisma: {} },
-    "@/lib/sales": {},
-    "@/lib/easystore-webhook": { verifyEasystoreSignature, EASYSTORE_EVENT_TYPE: "sale.completed", EASYSTORE_WEBHOOK_MAX_BODY_BYTES: 1_000_000 },
-    "next/cache": {},
-    "next/server": { NextResponse: { json: Response.json } },
-  }, h.env);
+  const { POST } = load(
+    "../src/app/api/webhooks/easystore/route.ts",
+    {
+      "@/lib/easystore-settings": h.settings,
+      "@/lib/prisma": { prisma: {} },
+      "@/lib/sales": {},
+      "@/lib/easystore-webhook": {
+        verifyEasystoreSignature,
+        EASYSTORE_EVENT_TYPE: "sale.completed",
+        EASYSTORE_WEBHOOK_MAX_BODY_BYTES: 1_000_000,
+      },
+      "next/cache": {},
+      "next/server": { NextResponse: { json: Response.json } },
+    },
+    h.env,
+  );
   function request(secret) {
     const rawBody = "{}";
     const timestamp = String(Math.floor(Date.now() / 1000));
-    return new Request("https://example.com/api/webhooks/easystore", { method: "POST", body: rawBody, headers: {
-      "x-easystore-timestamp": timestamp,
-      "x-easystore-signature": createEasystoreSignature({ secret, timestamp, rawBody }),
-    } });
+    return new Request("https://example.com/api/webhooks/easystore", {
+      method: "POST",
+      body: rawBody,
+      headers: {
+        "x-easystore-timestamp": timestamp,
+        "x-easystore-signature": createEasystoreSignature({ secret, timestamp, rawBody }),
+      },
+    });
   }
   const first = (await h.action("generate")).secret;
   assert.equal((await POST(request(first))).status, 503);
   await h.action("enable");
   // A 422 for missing event headers proves the signature passed verification.
   assert.equal((await POST(request(first))).status, 422);
-  const second = (await h.action("rotate", (await h.settings.getEasystoreWebhookStatus()).secretVersion)).secret;
+  const second = (
+    await h.action("rotate", (await h.settings.getEasystoreWebhookStatus()).secretVersion)
+  ).secret;
   assert.equal((await POST(request(first))).status, 401);
   assert.equal((await POST(request(second))).status, 422);
   await h.action("disable");
@@ -194,7 +265,10 @@ test("concurrent initial generations produce only one secret and cannot overwrit
   assert.equal(results.filter((result) => result.secret).length, 1);
   assert.equal(results.filter((result) => result.error).length, 1);
   await h.action("enable");
-  assert.equal(await h.settings.getActiveEasystoreWebhookSecret(), results.find((result) => result.secret).secret);
+  assert.equal(
+    await h.settings.getActiveEasystoreWebhookSecret(),
+    results.find((result) => result.secret).secret,
+  );
 });
 
 test("rotation requires confirmation of a valid current version and rejects stale confirmations", async () => {

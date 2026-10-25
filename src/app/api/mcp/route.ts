@@ -28,10 +28,7 @@ function jsonRpc(id: unknown, result: unknown, status = 200) {
 }
 
 function jsonRpcError(id: unknown, code: number, message: string, status = 400) {
-  return NextResponse.json(
-    { jsonrpc: "2.0", id, error: { code, message } },
-    { status },
-  );
+  return NextResponse.json({ jsonrpc: "2.0", id, error: { code, message } }, { status });
 }
 
 function toolText(text: string) {
@@ -173,10 +170,7 @@ export async function POST(request: NextRequest) {
 
     try {
       if (name === "create_expense") {
-        return jsonRpc(
-          body.id,
-          await createExpense(argumentsValue, agentToken.createdById),
-        );
+        return jsonRpc(body.id, await createExpense(argumentsValue, agentToken.createdById));
       }
 
       if (name === "create_admin_user") {

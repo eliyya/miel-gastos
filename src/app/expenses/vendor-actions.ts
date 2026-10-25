@@ -10,5 +10,5 @@ export async function getExpenseVendors(): Promise<string[]> {
     where: { vendor: { not: null } },
     orderBy: { vendor: "asc" },
   });
-  return vendors.flatMap(({ vendor }) => vendor?.trim() ? [vendor.trim()] : []);
+  return vendors.flatMap(({ vendor }) => (vendor?.trim() ? [vendor.trim()] : []));
 }

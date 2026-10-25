@@ -7,7 +7,12 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-const libre = Libre_Baskerville({ variable: "--font-libre", subsets: ["latin"], weight: ["400", "700"], display: "swap" });
+const libre = Libre_Baskerville({
+  variable: "--font-libre",
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
+});
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",

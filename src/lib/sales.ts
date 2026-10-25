@@ -14,19 +14,21 @@ export function calculateSale(items: SaleLine[], cardRateBps: number) {
     return {
       subtotal,
       production: item.quantity * item.unitCostCents,
-      sellerPayment: Math.round(subtotal * item.commissionBps / 10_000),
+      sellerPayment: Math.round((subtotal * item.commissionBps) / 10_000),
     };
   });
   const subtotal = lines.reduce((sum, line) => sum + line.subtotal, 0);
   const production = lines.reduce((sum, line) => sum + line.production, 0);
   const sellerPayment = lines.reduce((sum, line) => sum + line.sellerPayment, 0);
-  const cardFee = Math.round(subtotal * cardRateBps / 10_000);
+  const cardFee = Math.round((subtotal * cardRateBps) / 10_000);
   const cost = production + sellerPayment + cardFee;
   return { lines, subtotal, production, sellerPayment, cardFee, cost, profit: subtotal - cost };
 }
 
 export function parseHundredths(value: unknown, max = 100_000_000): number | null {
-  const raw = String(value ?? "").trim().replace(",", ".");
+  const raw = String(value ?? "")
+    .trim()
+    .replace(",", ".");
   if (!/^\d+(\.\d{1,2})?$/.test(raw)) return null;
   const [whole, fraction = ""] = raw.split(".");
   const result = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
@@ -35,8 +37,20 @@ export function parseHundredths(value: unknown, max = 100_000_000): number | nul
 
 export type SalesFormState = { error?: string; success?: string };
 
-export type CatalogProduct = { id: string; name: string; priceCents: number; costCents: number; active: boolean };
-export type CatalogSeller = { id: string; name: string; active: boolean; userId?: string | null; commissions: { productId: string; rateBps: number }[] };
+export type CatalogProduct = {
+  id: string;
+  name: string;
+  priceCents: number;
+  costCents: number;
+  active: boolean;
+};
+export type CatalogSeller = {
+  id: string;
+  name: string;
+  active: boolean;
+  userId?: string | null;
+  commissions: { productId: string; rateBps: number }[];
+};
 export type CatalogUser = { id: string; name: string | null; email: string };
 
 export function parseSaleInput(form: FormData) {
@@ -48,25 +62,55 @@ export function parseSaleInput(form: FormData) {
   const productIds = form.getAll("productId").map(String);
   const quantities = form.getAll("quantity").map(String);
   const prices = form.getAll("unitPrice").map((value) => parseHundredths(value));
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(soldAt) || !Number.isFinite(Date.parse(soldAt)) ||
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(soldAt) ||
+    !Number.isFinite(Date.parse(soldAt)) ||
     new Date(soldAt).toISOString().slice(0, 10) !== soldAt ||
-    !sellerId || customer.length > 160 || cardRateBps === null ||
-    !productIds.length || productIds.length > 100 || productIds.some((id) => !id) ||
-    productIds.length !== quantities.length || prices.length !== productIds.length || prices.some((price) => price === null) || new Set(productIds).size !== productIds.length ||
-    quantities.some((q) => !/^\d+$/.test(q) || Number(q) < 1 || Number(q) > 10_000)) {
+    !sellerId ||
+    customer.length > 160 ||
+    cardRateBps === null ||
+    !productIds.length ||
+    productIds.length > 100 ||
+    productIds.some((id) => !id) ||
+    productIds.length !== quantities.length ||
+    prices.length !== productIds.length ||
+    prices.some((price) => price === null) ||
+    new Set(productIds).size !== productIds.length ||
+    quantities.some((q) => !/^\d+$/.test(q) || Number(q) < 1 || Number(q) > 10_000)
+  ) {
     return null;
   }
-  return { soldAt, customer: customer || null, sellerId, paidByCard, cardRateBps,
-    items: productIds.map((productId, i) => ({ productId, quantity: Number(quantities[i]), unitPriceCents: prices[i]! })) };
+  return {
+    soldAt,
+    customer: customer || null,
+    sellerId,
+    paidByCard,
+    cardRateBps,
+    items: productIds.map((productId, i) => ({
+      productId,
+      quantity: Number(quantities[i]),
+      unitPriceCents: prices[i]!,
+    })),
+  };
 }
 
-export function saleSnapshot(products: CatalogProduct[], seller: CatalogSeller, rows: { productId: string; quantity: number; unitPriceCents?: number }[]) {
+export function saleSnapshot(
+  products: CatalogProduct[],
+  seller: CatalogSeller,
+  rows: { productId: string; quantity: number; unitPriceCents?: number }[],
+) {
   const items = rows.map((row) => {
     const product = products.find((p) => p.id === row.productId && p.active);
     const commission = seller.commissions.find((c) => c.productId === row.productId);
     if (!product || !seller.active || !commission) return null;
-    return { productId: product.id, productName: product.name, quantity: row.quantity,
-      unitPriceCents: row.unitPriceCents ?? product.priceCents, unitCostCents: product.costCents, commissionBps: commission.rateBps };
+    return {
+      productId: product.id,
+      productName: product.name,
+      quantity: row.quantity,
+      unitPriceCents: row.unitPriceCents ?? product.priceCents,
+      unitCostCents: product.costCents,
+      commissionBps: commission.rateBps,
+    };
   });
   if (items.some((item) => item === null)) return null;
   return { sellerName: seller.name, items: items as NonNullable<(typeof items)[number]>[] };

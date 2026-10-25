@@ -1,5 +1,5 @@
 try {
-process.loadEnvFile()
+  process.loadEnvFile();
 } catch {}
 
 import { hash } from "bcryptjs";
@@ -12,7 +12,9 @@ import pg from "pg";
 const { Client } = pg;
 
 if (process.argv.length > 2) {
-  console.error("Usa pnpm user:create sin argumentos. Los datos se solicitan de forma interactiva.");
+  console.error(
+    "Usa pnpm user:create sin argumentos. Los datos se solicitan de forma interactiva.",
+  );
   process.exit(1);
 }
 
@@ -62,7 +64,9 @@ try {
   } while (!email);
   name = (await prompts.question("Nombre (opcional): ")).trim() || null;
   do {
-    role = (await prompts.question("Rol [ADMIN/OWNER] (Enter = ADMIN): ")).trim().toUpperCase() || "ADMIN";
+    role =
+      (await prompts.question("Rol [ADMIN/OWNER] (Enter = ADMIN): ")).trim().toUpperCase() ||
+      "ADMIN";
     if (!["OWNER", "ADMIN"].includes(role)) console.log("Elige ADMIN u OWNER.");
   } while (!["OWNER", "ADMIN"].includes(role));
   while (true) {
@@ -71,7 +75,7 @@ try {
       console.log("Usa al menos 8 caracteres, sin espacios al inicio ni al final.");
       continue;
     }
-    if (password !== await secret("Confirma la contraseña: ")) {
+    if (password !== (await secret("Confirma la contraseña: "))) {
       console.log("Las contraseñas no coinciden. Inténtalo de nuevo.");
       continue;
     }
@@ -85,10 +89,9 @@ const client = new Client({ connectionString: process.env.DATABASE_URL });
 await client.connect();
 
 try {
-  const existingUser = await client.query(
-    'select id from "User" where email = $1 limit 1',
-    [email],
-  );
+  const existingUser = await client.query('select id from "User" where email = $1 limit 1', [
+    email,
+  ]);
 
   if (existingUser.rows[0]) {
     throw new Error(`User already exists: ${email}`);

@@ -10,5 +10,5 @@ export async function getSaleCustomers(): Promise<string[]> {
     where: { customer: { not: null } },
     orderBy: { customer: "asc" },
   });
-  return customers.flatMap(({ customer }) => customer?.trim() ? [customer.trim()] : []);
+  return customers.flatMap(({ customer }) => (customer?.trim() ? [customer.trim()] : []));
 }

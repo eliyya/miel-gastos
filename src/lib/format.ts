@@ -6,7 +6,9 @@ export function formatMoney(cents: number, currency = "MXN") {
 }
 
 export function parseMoneyToCents(value: FormDataEntryValue | null) {
-  const raw = String(value ?? "").replace(/,/g, ".").trim();
+  const raw = String(value ?? "")
+    .replace(/,/g, ".")
+    .trim();
   const amount = Number(raw);
 
   if (!Number.isFinite(amount) || amount <= 0) {

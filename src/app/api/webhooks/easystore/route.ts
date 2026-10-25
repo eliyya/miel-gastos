@@ -42,7 +42,8 @@ export async function POST(request: Request) {
   } catch {
     return errorResponse("La configuración del webhook de EasyStore no está disponible.", 503);
   }
-  if (!secret) return errorResponse("El webhook de EasyStore está desactivado o no está configurado.", 503);
+  if (!secret)
+    return errorResponse("El webhook de EasyStore está desactivado o no está configurado.", 503);
 
   let rawBody: string;
   try {
@@ -95,21 +96,32 @@ export async function POST(request: Request) {
   }
 
   if (!event.seller.external_id) {
-    return errorResponse("Falta seller.external_id: debe ser el ID de un vendedor de Miel Gastos.", 422);
+    return errorResponse(
+      "Falta seller.external_id: debe ser el ID de un vendedor de Miel Gastos.",
+      422,
+    );
   }
   const seller = await prisma.seller.findUnique({
     where: { id: event.seller.external_id },
     include: { commissions: true },
   });
-  if (!seller) return errorResponse("seller.external_id no corresponde a un vendedor de Miel Gastos.", 422);
+  if (!seller)
+    return errorResponse("seller.external_id no corresponde a un vendedor de Miel Gastos.", 422);
 
-  const userId = seller.userId ?? (await prisma.user.findFirst({
-    where: { role: "OWNER" },
-    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-    select: { id: true },
-  }))?.id;
+  const userId =
+    seller.userId ??
+    (
+      await prisma.user.findFirst({
+        where: { role: "OWNER" },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: { id: true },
+      })
+    )?.id;
   if (!userId) {
-    return errorResponse("El vendedor no tiene un usuario vinculado y no existe un owner para registrar la venta.", 422);
+    return errorResponse(
+      "El vendedor no tiene un usuario vinculado y no existe un owner para registrar la venta.",
+      422,
+    );
   }
 
   const existing = await prisma.sale.findUnique({
@@ -117,7 +129,12 @@ export async function POST(request: Request) {
     select: { id: true },
   });
   if (existing) {
-    return NextResponse.json({ ok: true, duplicate: true, event_id: event.id, sale_id: existing.id });
+    return NextResponse.json({
+      ok: true,
+      duplicate: true,
+      event_id: event.id,
+      sale_id: existing.id,
+    });
   }
 
   const productKeys = event.items.map((item) => item.external_product_id ?? item.product_id);
@@ -132,7 +149,10 @@ export async function POST(request: Request) {
   const productsById = new Map(products.map((product) => [product.id, product]));
   const missingProduct = productKeys.find((productKey) => !productsById.has(productKey));
   if (missingProduct) {
-    return errorResponse(`No existe un producto con ID ${missingProduct}. Configúralo como ID externo en EasyStore.`, 422);
+    return errorResponse(
+      `No existe un producto con ID ${missingProduct}. Configúralo como ID externo en EasyStore.`,
+      422,
+    );
   }
 
   const lineItems: ImportedLineItem[] = [];
@@ -145,7 +165,10 @@ export async function POST(request: Request) {
     }
     const commission = seller.commissions.find((value) => value.productId === product.id);
     if (!commission) {
-      return errorResponse(`No hay comisión configurada para ${seller.name} y ${product.name}.`, 422);
+      return errorResponse(
+        `No hay comisión configurada para ${seller.name} y ${product.name}.`,
+        422,
+      );
     }
     lineItems.push({
       productId: product.id,
@@ -173,7 +196,10 @@ export async function POST(request: Request) {
     taxCents !== 0 ||
     declaredTotalCents !== declaredSubtotalCents + taxCents
   ) {
-    return errorResponse("Los importes del evento no coinciden con sus productos o incluyen impuestos no soportados.", 422);
+    return errorResponse(
+      "Los importes del evento no coinciden con sus productos o incluyen impuestos no soportados.",
+      422,
+    );
   }
 
   const soldAt = mexicoDate(event.sale.created_at);
@@ -211,13 +237,21 @@ export async function POST(request: Request) {
     );
 
     if (result.duplicate) {
-      return NextResponse.json({ ok: true, duplicate: true, event_id: event.id, sale_id: result.saleId });
+      return NextResponse.json({
+        ok: true,
+        duplicate: true,
+        event_id: event.id,
+        sale_id: result.saleId,
+      });
     }
 
     revalidatePath("/");
     revalidatePath("/sales");
     revalidatePath("/statistics");
-    return NextResponse.json({ ok: true, duplicate: false, event_id: event.id, sale_id: result.saleId }, { status: 201 });
+    return NextResponse.json(
+      { ok: true, duplicate: false, event_id: event.id, sale_id: result.saleId },
+      { status: 201 },
+    );
   } catch (error) {
     if (isUniqueConstraintError(error)) {
       const duplicate = await prisma.sale.findUnique({
@@ -225,7 +259,12 @@ export async function POST(request: Request) {
         select: { id: true },
       });
       if (duplicate) {
-        return NextResponse.json({ ok: true, duplicate: true, event_id: event.id, sale_id: duplicate.id });
+        return NextResponse.json({
+          ok: true,
+          duplicate: true,
+          event_id: event.id,
+          sale_id: duplicate.id,
+        });
       }
     }
     console.error("No se pudo registrar el webhook de EasyStore", error);

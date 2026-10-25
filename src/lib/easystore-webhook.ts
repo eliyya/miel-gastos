@@ -1,9 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-import {
-  saleCompletedWebhookSchema,
-  type SaleCompletedWebhookPayload,
-} from "@oasiscode/easystore";
+import { saleCompletedWebhookSchema, type SaleCompletedWebhookPayload } from "@oasiscode/easystore";
 
 export const EASYSTORE_EVENT_TYPE = "sale.completed" as const;
 export const EASYSTORE_WEBHOOK_MAX_BODY_BYTES = 1_000_000;
@@ -75,14 +72,20 @@ export function verifyEasystoreSignature({
 }) {
   if (!timestamp || !signature || !/^\d{1,12}$/.test(timestamp)) return false;
   const timestampSeconds = Number(timestamp);
-  if (!Number.isSafeInteger(timestampSeconds) || Math.abs(now / 1000 - timestampSeconds) > EASYSTORE_WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS) {
+  if (
+    !Number.isSafeInteger(timestampSeconds) ||
+    Math.abs(now / 1000 - timestampSeconds) > EASYSTORE_WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS
+  ) {
     return false;
   }
 
   const expected = createEasystoreSignature({ secret, timestamp, rawBody });
   const expectedBuffer = Buffer.from(expected);
   const suppliedBuffer = Buffer.from(signature);
-  return expectedBuffer.length === suppliedBuffer.length && timingSafeEqual(expectedBuffer, suppliedBuffer);
+  return (
+    expectedBuffer.length === suppliedBuffer.length &&
+    timingSafeEqual(expectedBuffer, suppliedBuffer)
+  );
 }
 
 export function moneyToCents(value: number | string): number | null {
