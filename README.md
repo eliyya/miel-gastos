@@ -11,7 +11,7 @@ Todos los usuarios creados manualmente trabajan sobre la misma libreta del negoc
 - Tailwind CSS 4
 - shadcn/ui sobre Base UI
 - PostgreSQL
-- Prisma 7
+- Prisma 7 y Prisma 8 RC en paralelo
 - Sesiones con correo, contrasena y TOTP
 
 ## Desarrollo
@@ -33,6 +33,14 @@ APP_OWNER_PASSWORD="change-me-12345"
 ```
 
 En esta maquina, `.env` apunta a la base de Supabase del proyecto.
+
+## Prisma en paralelo
+
+`pnpm db:generate` genera los clientes de Prisma 7 y Prisma 8 desde el mismo
+esquema. Prisma 7 mantiene las consultas actuales y las migraciones; el cliente de
+Prisma 8 se importa desde `@/lib/prisma8`. Consulta
+[`docs/prisma-paralelo.md`](docs/prisma-paralelo.md) para ver los comandos y las
+diferencias entre las dos versiones.
 
 ## Navegación
 
@@ -90,7 +98,7 @@ se calculan usando exclusivamente esos valores históricos, sin metadata duplica
 La comisión se redondea al centavo por partida y la tarjeta sobre el subtotal total.
 La ganancia es el margen de la venta; no descuenta de nuevo los gastos de la libreta.
 
-Aplicar el esquema antes de usar estas pantallas: `pnpm exec prisma migrate deploy`.
+Aplicar el esquema antes de usar estas pantallas: `pnpm exec prisma7 migrate deploy`.
 Pruebas de cálculos: `node --test scripts/sales.test.mjs` (Node 24).
 
 ## Webhook de EasyStore

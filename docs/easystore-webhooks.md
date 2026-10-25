@@ -16,7 +16,7 @@ desfase y cuerpos de más de 1 MB.
 
 ## Configuración
 
-Antes de desplegar, aplica las migraciones (`pnpm exec prisma migrate deploy`) y
+Antes de desplegar, aplica las migraciones (`pnpm exec prisma7 migrate deploy`) y
 define en el entorno del servidor una clave de cifrado de 32 bytes en base64:
 
 ```bash
@@ -104,7 +104,7 @@ reintenta la misma entrega, Miel Gastos responde `2xx` con `duplicate: true` y
 no crea otra venta. Ejecuta las migraciones antes de activar el webhook:
 
 ```bash
-pnpm exec prisma migrate deploy
+pnpm exec prisma7 migrate deploy
 ```
 
 Pruebas de configuración, permisos, cifrado, rotación y recepción:

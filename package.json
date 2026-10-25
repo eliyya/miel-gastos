@@ -4,15 +4,18 @@
     "private": true,
     "scripts": {
         "dev": "next dev",
-        "build": "prisma generate && next build",
-        "start": "prisma migrate deploy && next start",
+        "build": "pnpm run db:generate && next build",
+        "start": "prisma7 migrate deploy && next start",
         "lint": "vp lint",
         "format": "vp fmt",
-        "postinstall": "prisma generate",
+        "postinstall": "pnpm run db:generate",
         "db:up": "docker compose up -d postgres",
-        "db:migrate": "prisma migrate dev",
+        "db:generate": "prisma7 generate && prisma contract emit",
+        "db:7:generate": "prisma7 generate",
+        "db:8:generate": "prisma contract emit",
+        "db:migrate": "prisma7 migrate dev",
         "db:seed": "node scripts/seed.mjs",
-        "db:studio": "prisma studio",
+        "db:studio": "prisma7 studio",
         "user:create": "node scripts/create-user.mjs"
     },
     "dependencies": {
@@ -20,6 +23,7 @@
         "@oasiscode/easystore": "0.3.1",
         "@prisma/adapter-pg": "7.10.1",
         "@prisma/client": "7.10.1",
+        "@prisma/orm-postgres": "8.0.0-rc.20",
         "bcryptjs": "3.0.3",
         "class-variance-authority": "0.7.1",
         "cn": "0.5.0",
@@ -33,10 +37,12 @@
         "react-dom": "19.3.1",
         "server-only": "0.0.1",
         "shadcn": "4.22.1",
+        "temporal-polyfill": "1.0.4",
         "tw-animate-css": "1.4.0",
         "zod": "4.6.7"
     },
     "devDependencies": {
+        "@prisma/prisma7": "7.10.1",
         "@tailwindcss/postcss": "4.3.3",
         "@types/node": "24.19.2",
         "@types/pg": "8.23.1",
@@ -44,7 +50,7 @@
         "@types/react": "19.3.0",
         "@types/react-dom": "19.3.0",
         "@typescript/typescript6": "6.0.2",
-        "prisma": "7.10.1",
+        "prisma": "8.0.0-rc.27",
         "tailwindcss": "4.3.3",
         "typescript": "7.0.2",
         "vite-plus": "1.4.0"
