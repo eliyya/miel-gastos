@@ -13,3 +13,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Finish every delivered change with a Git commit.
 - This project runs on Node.js 24. Write scripts in TypeScript (`.ts`) rather than JavaScript.
 - Do not use the Stripe types flag; it is not needed in this environment.
+- Implement all new database functionality with Prisma 8. Keep existing Prisma 7 functionality on Prisma 7.
