@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
-import ts from "typescript";
+import ts from "@typescript/typescript6";
 import * as sales from "../src/lib/sales.ts";
 
 const source = readFileSync(new URL("../src/app/sales/actions.ts", import.meta.url), "utf8");
