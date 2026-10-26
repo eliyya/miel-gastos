@@ -1,15 +1,15 @@
 'use client'
 
 import { Package, Users } from 'lucide-react'
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 
 import { saveProductAction, saveSellerAction } from '@/app/sales/actions'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Input } from '@/components/ui/input'
 import { NativeSelect } from '@/components/ui/native-select'
+import { isInputEdited, RetornableInput } from '@/components/ui/retornable-input'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import type { CatalogProduct, CatalogSeller, CatalogUser, SalesFormState } from '@/lib/sales'
 
@@ -31,9 +31,36 @@ function Feedback({ state }: { state: SalesFormState }) {
 }
 
 function ProductForm({ product }: { product?: CatalogProduct }) {
-    const [state, action, pending] = useActionState(saveProductAction, {})
+    const original = {
+        name: product?.name ?? '',
+        price: product ? (product.priceCents / 100).toFixed(2) : '',
+        cost: product ? (product.costCents / 100).toFixed(2) : '',
+        active: product?.active ?? true,
+    }
+    const [values, setValues] = useState(original)
+    const [state, action, pending] = useActionState(
+        async (previous: SalesFormState, form: FormData) => {
+            const result = await saveProductAction(previous, form)
+            if (result.success && !product) setValues(original)
+            return result
+        },
+        {},
+    )
+    const hasChanges =
+        !product ||
+        isInputEdited(values.name, original.name) ||
+        isInputEdited(values.price, original.price, 'number') ||
+        isInputEdited(values.cost, original.cost, 'number') ||
+        values.active !== original.active
+
     return (
-        <form action={action} className="space-y-4 rounded-xl border bg-card p-4 sm:p-5">
+        <form
+            action={action}
+            className="space-y-4 rounded-xl border bg-card p-4 sm:p-5"
+            onSubmit={event => {
+                if (pending || !hasChanges) event.preventDefault()
+            }}
+        >
             <input type="hidden" name="id" value={product?.id ?? ''} />
             {product && (
                 <p className="text-xs text-muted-foreground">
@@ -45,41 +72,52 @@ function ProductForm({ product }: { product?: CatalogProduct }) {
             )}
             <fieldset disabled={pending} className="space-y-3">
                 <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
-                    <label className="grid gap-2 text-sm">
-                        Nombre
-                        <Input name="name" defaultValue={product?.name} maxLength={120} required />
-                    </label>
-                    <label className="grid gap-2 text-sm">
-                        Precio (MXN)
-                        <Input
-                            type="number"
-                            name="price"
-                            min="0.01"
-                            max="1000000"
-                            step="0.01"
-                            defaultValue={product ? (product.priceCents / 100).toFixed(2) : ''}
-                            required
-                        />
-                    </label>
-                    <label className="grid gap-2 text-sm">
-                        Costo de producción (MXN)
-                        <Input
-                            type="number"
-                            name="cost"
-                            min="0"
-                            max="1000000"
-                            step="0.01"
-                            defaultValue={product ? (product.costCents / 100).toFixed(2) : ''}
-                            required
-                        />
-                    </label>
+                    <RetornableInput
+                        label="Nombre"
+                        name="name"
+                        value={values.name}
+                        originalValue={product ? original.name : undefined}
+                        onValueChange={name => setValues(current => ({ ...current, name }))}
+                        maxLength={120}
+                        required
+                    />
+                    <RetornableInput
+                        label="Precio (MXN)"
+                        type="number"
+                        name="price"
+                        min="0.01"
+                        max="1000000"
+                        step="0.01"
+                        value={values.price}
+                        originalValue={product ? original.price : undefined}
+                        onValueChange={price => setValues(current => ({ ...current, price }))}
+                        required
+                    />
+                    <RetornableInput
+                        label="Costo de producción (MXN)"
+                        type="number"
+                        name="cost"
+                        min="0"
+                        max="1000000"
+                        step="0.01"
+                        value={values.cost}
+                        originalValue={product ? original.cost : undefined}
+                        onValueChange={cost => setValues(current => ({ ...current, cost }))}
+                        required
+                    />
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <label className="flex items-center gap-2 text-sm">
-                        <Checkbox name="active" defaultChecked={product?.active ?? true} />
+                        <Checkbox
+                            name="active"
+                            checked={values.active}
+                            onCheckedChange={active =>
+                                setValues(current => ({ ...current, active }))
+                            }
+                        />
                         Disponible para nuevas ventas
                     </label>
-                    <Button type="submit" disabled={pending}>
+                    <Button type="submit" disabled={pending || !hasChanges}>
                         {pending ? 'Guardando…' : product ? 'Guardar producto' : 'Agregar producto'}
                     </Button>
                 </div>
@@ -100,9 +138,47 @@ function SellerForm({
     users: CatalogUser[]
     sellers: CatalogSeller[]
 }) {
-    const [state, action, pending] = useActionState(saveSellerAction, {})
+    const original = {
+        name: seller?.name ?? '',
+        userId: seller?.userId ?? '',
+        active: seller?.active ?? true,
+        commissions: Object.fromEntries(
+            products.map(product => {
+                const commission = seller?.commissions.find(c => c.productId === product.id)
+                return [product.id, commission ? (commission.rateBps / 100).toFixed(2) : '']
+            }),
+        ),
+    }
+    const [values, setValues] = useState(original)
+    const [state, action, pending] = useActionState(
+        async (previous: SalesFormState, form: FormData) => {
+            const result = await saveSellerAction(previous, form)
+            if (result.success && !seller) setValues(original)
+            return result
+        },
+        {},
+    )
+    const hasChanges =
+        !seller ||
+        isInputEdited(values.name, original.name) ||
+        values.userId !== original.userId ||
+        values.active !== original.active ||
+        products.some(product =>
+            isInputEdited(
+                values.commissions[product.id] ?? original.commissions[product.id],
+                original.commissions[product.id],
+                'number',
+            ),
+        )
+
     return (
-        <form action={action} className="space-y-4 rounded-xl border bg-card p-4 sm:p-5">
+        <form
+            action={action}
+            className="space-y-4 rounded-xl border bg-card p-4 sm:p-5"
+            onSubmit={event => {
+                if (pending || !hasChanges) event.preventDefault()
+            }}
+        >
             <input type="hidden" name="id" value={seller?.id ?? ''} />
             {seller && (
                 <p className="text-xs text-muted-foreground">
@@ -113,13 +189,24 @@ function SellerForm({
                 </p>
             )}
             <fieldset disabled={pending} className="space-y-4">
-                <label className="grid gap-2 text-sm">
-                    Nombre del vendedor
-                    <Input name="name" defaultValue={seller?.name} maxLength={120} required />
-                </label>
+                <RetornableInput
+                    label="Nombre del vendedor"
+                    name="name"
+                    value={values.name}
+                    originalValue={seller ? original.name : undefined}
+                    onValueChange={name => setValues(current => ({ ...current, name }))}
+                    maxLength={120}
+                    required
+                />
                 <label className="grid gap-2 text-sm">
                     Usuario asociado (opcional)
-                    <NativeSelect name="userId" defaultValue={seller?.userId ?? ''}>
+                    <NativeSelect
+                        name="userId"
+                        value={values.userId}
+                        onChange={event =>
+                            setValues(current => ({ ...current, userId: event.target.value }))
+                        }
+                    >
                         <option value="">Sin usuario asociado</option>
                         {users.map(user => (
                             <option
@@ -140,26 +227,28 @@ function SellerForm({
                     asociarse a un solo vendedor.
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {products.map(product => {
-                        const commission = seller?.commissions.find(c => c.productId === product.id)
-                        return (
-                            <label key={product.id} className="grid gap-2 text-sm">
-                                {product.name}
-                                {!product.active ? ' (inactivo)' : ''} · comisión (%)
-                                <Input
-                                    type="number"
-                                    name={`commission:${product.id}`}
-                                    min="0"
-                                    max="100"
-                                    step="0.01"
-                                    placeholder="Sin configurar"
-                                    defaultValue={
-                                        commission ? (commission.rateBps / 100).toFixed(2) : ''
-                                    }
-                                />
-                            </label>
-                        )
-                    })}
+                    {products.map(product => (
+                        <RetornableInput
+                            key={product.id}
+                            label={`${product.name}${!product.active ? ' (inactivo)' : ''} · comisión (%)`}
+                            type="number"
+                            name={`commission:${product.id}`}
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            placeholder="Sin configurar"
+                            value={
+                                values.commissions[product.id] ?? original.commissions[product.id]
+                            }
+                            originalValue={seller ? original.commissions[product.id] : undefined}
+                            onValueChange={value =>
+                                setValues(current => ({
+                                    ...current,
+                                    commissions: { ...current.commissions, [product.id]: value },
+                                }))
+                            }
+                        />
+                    ))}
                 </div>
                 <p className="text-xs text-muted-foreground">
                     Escribe 0 si no cobra comisión. Un campo vacío impide vender ese producto con
@@ -167,10 +256,16 @@ function SellerForm({
                 </p>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <label className="flex items-center gap-2 text-sm">
-                        <Checkbox name="active" defaultChecked={seller?.active ?? true} />
+                        <Checkbox
+                            name="active"
+                            checked={values.active}
+                            onCheckedChange={active =>
+                                setValues(current => ({ ...current, active }))
+                            }
+                        />
                         Disponible para nuevas ventas
                     </label>
-                    <Button type="submit" disabled={pending}>
+                    <Button type="submit" disabled={pending || !hasChanges}>
                         {pending ? 'Guardando…' : seller ? 'Guardar vendedor' : 'Agregar vendedor'}
                     </Button>
                 </div>
