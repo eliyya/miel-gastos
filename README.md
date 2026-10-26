@@ -11,7 +11,7 @@ Todos los usuarios creados manualmente trabajan sobre la misma libreta del negoc
 - Tailwind CSS 4
 - shadcn/ui sobre Base UI
 - PostgreSQL
-- Prisma 7
+- Prisma 7 y Prisma 8 RC en paralelo
 - Sesiones con correo, contrasena y TOTP
 
 ## Desarrollo
@@ -33,6 +33,14 @@ APP_OWNER_PASSWORD="change-me-12345"
 ```
 
 En esta maquina, `.env` apunta a la base de Supabase del proyecto.
+
+## Prisma en paralelo
+
+`pnpm db:generate` genera los clientes de Prisma 7 y Prisma 8 desde el mismo
+esquema. Prisma 7 mantiene las consultas actuales y las migraciones; el cliente de
+Prisma 8 se importa desde `@/lib/prisma8`. Consulta
+[`docs/prisma-paralelo.md`](docs/prisma-paralelo.md) para ver los comandos y las
+diferencias entre las dos versiones.
 
 ## Navegación
 
@@ -90,7 +98,7 @@ se calculan usando exclusivamente esos valores históricos, sin metadata duplica
 La comisión se redondea al centavo por partida y la tarjeta sobre el subtotal total.
 La ganancia es el margen de la venta; no descuenta de nuevo los gastos de la libreta.
 
-Aplicar el esquema antes de usar estas pantallas: `pnpm exec prisma migrate deploy`.
+Aplicar el esquema antes de usar estas pantallas: `pnpm exec prisma7 migrate deploy`.
 Pruebas de cálculos: `node --test scripts/sales.test.mjs` (Node 24).
 
 ## Webhook de EasyStore
@@ -123,6 +131,27 @@ El login solicita primero correo y contraseña. Si el usuario tiene TOTP activo,
 `pnpm db:seed` crea el usuario owner si no existe y registra el gasto inicial de envases:
 
 - $60.00 MXN por 20 botellas para miel a $3.00 cada una.
+
+## Respaldo JSON
+
+En **Mi cuenta → Respaldo de la base de datos**, un OWNER con TOTP activo puede
+descargar todos los registros de las diez tablas de la aplicación. La descarga
+incluye usuarios, sesiones, tokens, gastos, productos, vendedores, comisiones,
+ventas, partidas y configuración de EasyStore, sin filtros por usuario o fecha.
+
+`GET /api/backup` valida la sesión y el rol en el servidor y responde como archivo
+adjunto sin caché. Prisma 8 ejecuta una sola consulta de lectura para obtener una
+instantánea consistente. El JSON contiene `format`, `version`, `exportedAt`,
+`counts`, `schema` (contrato de datos) y `data` (registros por tabla). Conserva los
+IDs y las claves foráneas; las tablas vacías se representan como arreglos vacíos.
+
+El archivo contiene información sensible, incluidos hashes de contraseñas y
+secretos TOTP. Conserva el respaldo de forma privada. No incluye variables de
+entorno, archivos ni tablas internas de migraciones de Prisma. Guarda por separado
+`EASYSTORE_WEBHOOK_ENCRYPTION_KEY`: es necesaria para recuperar el secreto cifrado
+del webhook. La importación/restauración del JSON todavía no tiene interfaz;
+requiere reconstruir el esquema con las migraciones e importar respetando las
+relaciones.
 
 ## Comandos utiles
 

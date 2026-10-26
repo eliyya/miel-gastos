@@ -1,11 +1,10 @@
 allowBuilds:
-  '@prisma/engines': true
-  prisma: true
-  sharp: true
-  unrs-resolver: true
+    '@prisma/engines': true
+    prisma: true
+    sharp: true
+    unrs-resolver: true
 ignoredBuiltDependencies:
-  - sharp
-  - unrs-resolver
+    - sharp
+    - unrs-resolver
 minimumReleaseAgeExclude:
-  - '@oasiscode/easystore@0.2.1'
-  - lucide-react@1.55.0
+    - '@oasiscode/easystore'
