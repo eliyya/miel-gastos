@@ -228,11 +228,6 @@ function SellerForm({
                         ))}
                     </NativeSelect>
                 </label>
-                <p className="text-xs text-muted-foreground">
-                    Al registrar una venta, este vendedor se seleccionará por defecto para el
-                    usuario asociado. El usuario podrá elegir otro vendedor. Cada usuario puede
-                    asociarse a un solo vendedor.
-                </p>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {products.map(product => (
                         <RetornableInput
@@ -257,10 +252,6 @@ function SellerForm({
                         />
                     ))}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                    Escribe 0 si no cobra comisión. Un campo vacío impide vender ese producto con
-                    este vendedor.
-                </p>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <label className="flex items-center gap-2 text-sm">
                         <Switch
