@@ -1,6 +1,16 @@
 'use client'
 
-import { Banknote, Factory, Package, Percent, UserRound, Users } from 'lucide-react'
+import {
+    Banknote,
+    Factory,
+    LoaderCircle,
+    Package,
+    Percent,
+    Plus,
+    Save,
+    UserRound,
+    Users,
+} from 'lucide-react'
 import { useActionState, useState } from 'react'
 
 import { saveProductAction, saveSellerAction } from '@/app/sales/actions'
@@ -130,6 +140,13 @@ function ProductForm({ product }: { product?: CatalogProduct }) {
                         Disponible
                     </label>
                     <Button type="submit" disabled={pending || !hasChanges}>
+                        {pending ? (
+                            <LoaderCircle aria-hidden="true" className="animate-spin" />
+                        ) : product ? (
+                            <Save aria-hidden="true" />
+                        ) : (
+                            <Plus aria-hidden="true" />
+                        )}
                         {pending ? 'Guardando…' : product ? 'Guardar' : 'Agregar producto'}
                     </Button>
                 </div>
@@ -276,6 +293,13 @@ function SellerForm({
                         Disponible
                     </label>
                     <Button type="submit" disabled={pending || !hasChanges}>
+                        {pending ? (
+                            <LoaderCircle aria-hidden="true" className="animate-spin" />
+                        ) : seller ? (
+                            <Save aria-hidden="true" />
+                        ) : (
+                            <Plus aria-hidden="true" />
+                        )}
                         {pending ? 'Guardando…' : seller ? 'Guardar' : 'Agregar vendedor'}
                     </Button>
                 </div>
