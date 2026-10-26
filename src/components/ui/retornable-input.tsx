@@ -4,12 +4,8 @@ import { cn } from 'cn'
 import { Undo2 } from 'lucide-react'
 import { useId, useRef, type ComponentProps } from 'react'
 
-import {
-    InputGroup,
-    InputGroupAddon,
-    InputGroupButton,
-    InputGroupInput,
-} from '@/components/ui/input-group'
+import { Input } from '@/components/ui/input'
+import { InputActionButton } from '@/components/ui/input-action-button'
 import { Label } from '@/components/ui/label'
 
 export function isInputEdited(value: string, originalValue: string, type = 'text') {
@@ -23,7 +19,7 @@ export function isInputEdited(value: string, originalValue: string, type = 'text
 }
 
 type RetornableInputProps = Omit<
-    ComponentProps<typeof InputGroupInput>,
+    ComponentProps<typeof Input>,
     'value' | 'defaultValue' | 'onChange' | 'ref'
 > & {
     label: string
@@ -41,6 +37,7 @@ export function RetornableInput({
     type = 'text',
     disabled,
     readOnly,
+    className,
     'aria-describedby': describedBy,
     ...props
 }: RetornableInputProps) {
@@ -59,8 +56,8 @@ export function RetornableInput({
                     {edited ? 'Modificado' : ''}
                 </span>
             </div>
-            <InputGroup className={cn(edited && 'border-ring')}>
-                <InputGroupInput
+            <div className="relative">
+                <Input
                     {...props}
                     ref={inputRef}
                     id={inputId}
@@ -68,26 +65,24 @@ export function RetornableInput({
                     value={value}
                     disabled={disabled}
                     readOnly={readOnly}
+                    className={cn(edited && 'border-ring pr-12', className)}
                     aria-describedby={[describedBy, `${inputId}-edited`].filter(Boolean).join(' ')}
                     onChange={event => onValueChange(event.currentTarget.value)}
                 />
                 {edited && (
-                    <InputGroupAddon align="inline-end">
-                        <InputGroupButton
-                            size="icon-sm"
-                            disabled={disabled || readOnly}
-                            aria-label={`Restaurar ${label}`}
-                            title="Restaurar el valor guardado"
-                            onClick={() => {
-                                onValueChange(originalValue!)
-                                inputRef.current?.focus()
-                            }}
-                        >
-                            <Undo2 aria-hidden="true" />
-                        </InputGroupButton>
-                    </InputGroupAddon>
+                    <InputActionButton
+                        disabled={disabled || readOnly}
+                        aria-label={`Restaurar ${label}`}
+                        title="Restaurar el valor guardado"
+                        onClick={() => {
+                            onValueChange(originalValue!)
+                            inputRef.current?.focus()
+                        }}
+                    >
+                        <Undo2 aria-hidden="true" />
+                    </InputActionButton>
                 )}
-            </InputGroup>
+            </div>
         </div>
     )
 }

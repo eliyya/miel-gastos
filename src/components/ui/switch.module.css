@@ -1,0 +1,18 @@
+.root {
+    width: 2.75rem;
+    height: 1.5rem;
+}
+
+.root[data-checked] {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+.root[data-disabled] {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.thumb[data-checked] {
+    transform: translateX(1.25rem);
+}

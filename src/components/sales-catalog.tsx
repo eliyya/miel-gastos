@@ -7,9 +7,9 @@ import { saveProductAction, saveSellerAction } from '@/app/sales/actions'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
 import { NativeSelect } from '@/components/ui/native-select'
 import { isInputEdited, RetornableInput } from '@/components/ui/retornable-input'
+import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import type { CatalogProduct, CatalogSeller, CatalogUser, SalesFormState } from '@/lib/sales'
 
@@ -71,7 +71,7 @@ function ProductForm({ product }: { product?: CatalogProduct }) {
                 </p>
             )}
             <fieldset disabled={pending} className="space-y-3">
-                <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
+                <div className="grid items-end gap-3 lg:grid-cols-2">
                     <RetornableInput
                         label="Nombre"
                         name="name"
@@ -81,34 +81,41 @@ function ProductForm({ product }: { product?: CatalogProduct }) {
                         maxLength={120}
                         required
                     />
-                    <RetornableInput
-                        label="Precio (MXN)"
-                        type="number"
-                        name="price"
-                        min="0.01"
-                        max="1000000"
-                        step="0.01"
-                        value={values.price}
-                        originalValue={product ? original.price : undefined}
-                        onValueChange={price => setValues(current => ({ ...current, price }))}
-                        required
-                    />
-                    <RetornableInput
-                        label="Costo de producción (MXN)"
-                        type="number"
-                        name="cost"
-                        min="0"
-                        max="1000000"
-                        step="0.01"
-                        value={values.cost}
-                        originalValue={product ? original.cost : undefined}
-                        onValueChange={cost => setValues(current => ({ ...current, cost }))}
-                        required
-                    />
+                    <div
+                        className="grid items-end gap-3"
+                        style={{
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 12rem), 1fr))',
+                        }}
+                    >
+                        <RetornableInput
+                            label="Precio (MXN)"
+                            type="number"
+                            name="price"
+                            min="0.01"
+                            max="1000000"
+                            step="0.01"
+                            value={values.price}
+                            originalValue={product ? original.price : undefined}
+                            onValueChange={price => setValues(current => ({ ...current, price }))}
+                            required
+                        />
+                        <RetornableInput
+                            label="Costo de producción (MXN)"
+                            type="number"
+                            name="cost"
+                            min="0"
+                            max="1000000"
+                            step="0.01"
+                            value={values.cost}
+                            originalValue={product ? original.cost : undefined}
+                            onValueChange={cost => setValues(current => ({ ...current, cost }))}
+                            required
+                        />
+                    </div>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <label className="flex items-center gap-2 text-sm">
-                        <Checkbox
+                        <Switch
                             name="active"
                             checked={values.active}
                             onCheckedChange={active =>
@@ -256,7 +263,7 @@ function SellerForm({
                 </p>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <label className="flex items-center gap-2 text-sm">
-                        <Checkbox
+                        <Switch
                             name="active"
                             checked={values.active}
                             onCheckedChange={active =>

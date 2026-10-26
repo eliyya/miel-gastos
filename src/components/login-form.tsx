@@ -7,6 +7,7 @@ import { useActionState, useEffect, useRef, useState } from 'react'
 import { loginAction } from '@/app/actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { InputActionButton } from '@/components/ui/input-action-button'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import type { LoginState } from '@/lib/login-state'
 
@@ -102,22 +103,18 @@ function LoginAttempt({ onBack }: { onBack: () => void }) {
                                     .join(' ') || undefined
                             }
                         />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            type="button"
+                        <InputActionButton
                             disabled={pending}
                             onClick={() => setShowPassword(!showPassword)}
                             aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                             aria-pressed={showPassword}
-                            className="absolute inset-y-0 right-0 flex h-full w-12 items-center justify-center rounded-r-xl text-[#6b4a2b] outline-none hover:text-[#44240b] focus-visible:ring-2 focus-visible:ring-honey"
                         >
                             {showPassword ? (
                                 <EyeOff className="size-4" />
                             ) : (
                                 <Eye className="size-4" />
                             )}
-                        </Button>
+                        </InputActionButton>
                     </div>
                     {state.fields?.password && (
                         <p id="password-error" className="text-sm text-red-800">
