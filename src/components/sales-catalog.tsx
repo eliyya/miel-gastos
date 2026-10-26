@@ -1,6 +1,6 @@
 'use client'
 
-import { Package, Users } from 'lucide-react'
+import { Banknote, Factory, Package, Percent, UserRound, Users } from 'lucide-react'
 import { useActionState, useState } from 'react'
 
 import { saveProductAction, saveSellerAction } from '@/app/sales/actions'
@@ -12,6 +12,8 @@ import { isInputEdited, RetornableInput } from '@/components/ui/retornable-input
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import type { CatalogProduct, CatalogSeller, CatalogUser, SalesFormState } from '@/lib/sales'
+
+import inputIconStyles from '@/components/ui/input-icon.module.css'
 
 function Feedback({ state }: { state: SalesFormState }) {
     return (
@@ -74,6 +76,7 @@ function ProductForm({ product }: { product?: CatalogProduct }) {
                 <div className="grid items-end gap-3 lg:grid-cols-2">
                     <RetornableInput
                         label="Nombre"
+                        icon={Package}
                         name="name"
                         value={values.name}
                         originalValue={product ? original.name : undefined}
@@ -89,6 +92,7 @@ function ProductForm({ product }: { product?: CatalogProduct }) {
                     >
                         <RetornableInput
                             label="Precio (MXN)"
+                            icon={Banknote}
                             type="number"
                             name="price"
                             min="0.01"
@@ -101,6 +105,7 @@ function ProductForm({ product }: { product?: CatalogProduct }) {
                         />
                         <RetornableInput
                             label="Costo de producción (MXN)"
+                            icon={Factory}
                             type="number"
                             name="cost"
                             min="0"
@@ -122,10 +127,10 @@ function ProductForm({ product }: { product?: CatalogProduct }) {
                                 setValues(current => ({ ...current, active }))
                             }
                         />
-                        Disponible para nuevas ventas
+                        Disponible
                     </label>
                     <Button type="submit" disabled={pending || !hasChanges}>
-                        {pending ? 'Guardando…' : product ? 'Guardar producto' : 'Agregar producto'}
+                        {pending ? 'Guardando…' : product ? 'Guardar' : 'Agregar producto'}
                     </Button>
                 </div>
             </fieldset>
@@ -198,6 +203,7 @@ function SellerForm({
             <fieldset disabled={pending} className="space-y-4">
                 <RetornableInput
                     label="Nombre del vendedor"
+                    icon={UserRound}
                     name="name"
                     value={values.name}
                     originalValue={seller ? original.name : undefined}
@@ -207,32 +213,38 @@ function SellerForm({
                 />
                 <label className="grid gap-2 text-sm">
                     Usuario asociado (opcional)
-                    <NativeSelect
-                        name="userId"
-                        value={values.userId}
-                        onChange={event =>
-                            setValues(current => ({ ...current, userId: event.target.value }))
-                        }
-                    >
-                        <option value="">Sin usuario asociado</option>
-                        {users.map(user => (
-                            <option
-                                key={user.id}
-                                value={user.id}
-                                disabled={sellers.some(
-                                    other => other.id !== seller?.id && other.userId === user.id,
-                                )}
-                            >
-                                {user.name ? `${user.name} · ${user.email}` : user.email}
-                            </option>
-                        ))}
-                    </NativeSelect>
+                    <div className="relative">
+                        <NativeSelect
+                            className={inputIconStyles.input}
+                            name="userId"
+                            value={values.userId}
+                            onChange={event =>
+                                setValues(current => ({ ...current, userId: event.target.value }))
+                            }
+                        >
+                            <option value="">Sin usuario asociado</option>
+                            {users.map(user => (
+                                <option
+                                    key={user.id}
+                                    value={user.id}
+                                    disabled={sellers.some(
+                                        other =>
+                                            other.id !== seller?.id && other.userId === user.id,
+                                    )}
+                                >
+                                    {user.name ? `${user.name} · ${user.email}` : user.email}
+                                </option>
+                            ))}
+                        </NativeSelect>
+                        <UserRound aria-hidden="true" className={inputIconStyles.icon} />
+                    </div>
                 </label>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {products.map(product => (
                         <RetornableInput
                             key={product.id}
                             label={`${product.name}${!product.active ? ' (inactivo)' : ''} · comisión (%)`}
+                            icon={Percent}
                             type="number"
                             name={`commission:${product.id}`}
                             min="0"
@@ -261,10 +273,10 @@ function SellerForm({
                                 setValues(current => ({ ...current, active }))
                             }
                         />
-                        Disponible para nuevas ventas
+                        Disponible
                     </label>
                     <Button type="submit" disabled={pending || !hasChanges}>
-                        {pending ? 'Guardando…' : seller ? 'Guardar vendedor' : 'Agregar vendedor'}
+                        {pending ? 'Guardando…' : seller ? 'Guardar' : 'Agregar vendedor'}
                     </Button>
                 </div>
             </fieldset>

@@ -1,12 +1,14 @@
 'use client'
 
 import { cn } from 'cn'
-import { Undo2 } from 'lucide-react'
+import { Undo2, type LucideIcon } from 'lucide-react'
 import { useId, useRef, type ComponentProps } from 'react'
 
 import { Input } from '@/components/ui/input'
 import { InputActionButton } from '@/components/ui/input-action-button'
 import { Label } from '@/components/ui/label'
+
+import inputIconStyles from './input-icon.module.css'
 
 export function isInputEdited(value: string, originalValue: string, type = 'text') {
     // Formatting a number differently does not change the value that will be saved.
@@ -25,6 +27,7 @@ type RetornableInputProps = Omit<
     label: string
     value: string
     originalValue?: string
+    icon?: LucideIcon
     onValueChange: (value: string) => void
 }
 
@@ -32,6 +35,7 @@ export function RetornableInput({
     label,
     value,
     originalValue,
+    icon: Icon,
     onValueChange,
     id,
     type = 'text',
@@ -57,6 +61,7 @@ export function RetornableInput({
                 </span>
             </div>
             <div className="relative">
+                {Icon && <Icon aria-hidden="true" className={inputIconStyles.icon} />}
                 <Input
                     {...props}
                     ref={inputRef}
@@ -65,7 +70,11 @@ export function RetornableInput({
                     value={value}
                     disabled={disabled}
                     readOnly={readOnly}
-                    className={cn(edited && 'border-ring pr-12', className)}
+                    className={cn(
+                        Icon && inputIconStyles.input,
+                        edited && 'border-ring pr-12',
+                        className,
+                    )}
                     aria-describedby={[describedBy, `${inputId}-edited`].filter(Boolean).join(' ')}
                     onChange={event => onValueChange(event.currentTarget.value)}
                 />
